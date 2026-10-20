@@ -19,12 +19,22 @@ All interactive parameters are collected in a single session at startup.
 Bug fixes vs original scripts:
   - Sheet naming: H1h (was erroneously "H0h" for 1-hour averaging)
   - EXPECTED_TIMES aligned with HORAS_VALIDAS: both [1,2,4,8,12,24,96,168,360,720]
+  - A PSF is no longer written with NaN X/Q values when the bridge Excel holds "NA"
+
+Performance:
+  - ARCON96 and RADTRAD cases run in parallel (configurable workers; 1 = sequential)
+  - Sector log and every ISMR.cfd are parsed once for all averaging hours
+  - Bridge Excel is read once (was 10 sheet reads per PSF)
+  - .o0 files are parsed once in post-processing
+  - All questions (incl. output-folder handling and ARCON cleanup) are asked
+    up front, so the run is unattended once started
 """
 
 from __future__ import annotations
 
-import argparse, csv, json, logging, os, random, re, shutil, subprocess, sys
+import json, logging, os, random, re, shutil, subprocess, sys
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -32,12 +42,6 @@ import numpy as np
 import pandas as pd
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Font, PatternFill
-
-try:
-    from distutils.dir_util import copy_tree
-except ImportError:
-    def copy_tree(src: str, dst: str):
-        shutil.copytree(src, dst, dirs_exist_ok=True)
 
 # ===========================================================================
 # GLOBAL PATHS & CONSTANTS
@@ -305,15 +309,22 @@ def ask_all_params():
 
     raw_out = input("  RADTRAD output folder  (ENTER=psf_batch): ").strip()
     out_root = Path(raw_out) if raw_out else Path("psf_batch")
+    out_action = _ask_out_root_action(out_root)
 
     no_run = not _ask_yn("\n  Execute RADTRAD?", default=True)
+
+    print("\n  ── Execution ────────────────────────────────────────────")
+    def_workers = os.cpu_count() or 1
+    workers   = _ask_int(f"  Parallel workers          (ENTER={def_workers}):    ", def_workers, 1, 256)
+    del_arcon = _ask_yn("  Delete ARCON96 run directories after Phase 1?", default=False)
 
     print(f"\n{SEP}\n")
     return dict(
         num_met=num_met, dist_min=dist_min, dist_max=dist_max, delta=delta,
         template_path=template_path, nsets=nsets, fixed_sets=fixed_sets,
         support_names=(rft, nif, inp),
-        radtrad_exe=radtrad_exe, out_root=out_root, no_run=no_run,
+        radtrad_exe=radtrad_exe, out_root=out_root, out_action=out_action,
+        no_run=no_run, workers=workers, del_arcon=del_arcon,
     )
 
 
@@ -356,13 +367,11 @@ def _clean_arcon_dirs():
         _unlink(f)
 
 
-def _ask_delete_arcon_dirs():
+def _delete_arcon_dirs():
     """
-    After ARCON96 finishes, ask the user whether to delete the run
-    sub-directories (OVERALL: NNN_NN/  and SECTOR: X_NNN_V_NNN/).
-    The bridge Excel and TXT outputs are kept regardless.
+    Delete the ARCON96 run sub-directories (OVERALL: NNN_NN/  and
+    SECTOR: X_NNN_V_NNN/). The bridge Excel and TXT outputs are kept.
     """
-    # Count how many directories exist and their total size
     dirs = [
         sub for sub in CWD.iterdir()
         if sub.is_dir() and (sub.name[0].isdigit() or RE_CASE.match(sub.name))
@@ -374,24 +383,19 @@ def _ask_delete_arcon_dirs():
         sum(f.stat().st_size for f in d.rglob("*") if f.is_file())
         for d in dirs
     ) / (1024 ** 2)
+    for d in dirs:
+        _rmdir(d)
+    logging.info("Deleted %d ARCON96 run directories (%.1f MB).", len(dirs), total_mb)
 
-    print(f"\n  ARCON96 generated {len(dirs)} run directories ({total_mb:.1f} MB).")
-    print("  These contain the raw .log, .cfd and .out files.")
-    print("  The bridge Excel and TXT outputs have already been saved.")
 
-    while True:
-        raw = input("  Delete ARCON96 run directories? (y/N=ENTER): ").strip().lower()
-        if raw in ("", "n", "no"):
-            logging.info("ARCON96 run directories kept.")
-            return
-        if raw in ("y", "yes", "s", "si"):
-            deleted = 0
-            for d in dirs:
-                _rmdir(d)
-                deleted += 1
-            logging.info("Deleted %d ARCON96 run directories.", deleted)
-            return
-        print("  Answer y or n.")
+def _run_parallel(fn, items, workers):
+    """Apply fn to every item with up to `workers` threads; results keep input order.
+    Threads are enough: the heavy work happens in the external executables."""
+    items = list(items)
+    if workers <= 1 or len(items) <= 1:
+        return [fn(x) for x in items]
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        return list(ex.map(fn, items))
 
 
 # ===========================================================================
@@ -472,38 +476,44 @@ def _parse_log(case_dir, log_out, intervals_out, p95_path=None):
     if not lp.exists(): logging.warning("ISMR.log missing: %s", case_dir.name); return
     try: lines = lp.read_text(encoding="cp1252", errors="replace").splitlines()
     except Exception as e: logging.warning("Read error %s: %s", case_dir.name, e); return
+    name = case_dir.name; log_buf = []; int_buf = []
     i, n = 0, len(lines)
     while i < n:
         ln = lines[i]
         if "AVER. PER." in ln:
-            with log_out.open("a", encoding="utf-8") as f: f.write(f"{case_dir.name}: {ln}\n")
+            log_buf.append(f"{name}: {ln}\n")
             i += 1; continue
         if "TOTAL X/Qs" in ln:
-            with log_out.open("a", encoding="utf-8") as f:
-                f.write(f"{case_dir.name}: {ln}\n")
-                if i+1 < n: f.write(f"{case_dir.name}: {lines[i+1]}\n")
+            log_buf.append(f"{name}: {ln}\n")
+            if i+1 < n: log_buf.append(f"{name}: {lines[i+1]}\n")
             i += 2; continue
         if "95th PERCENTILE X/Q VALUES" in ln:
             if i+1 < n:
                 vl = lines[i+1]
-                with log_out.open("a", encoding="utf-8") as f: f.write(f"{case_dir.name}: {vl}\n")
+                log_buf.append(f"{name}: {vl}\n")
                 if p95_path:
                     nums = [float(x) for x in NUM_RE.findall(vl)]
                     if len(nums) >= len(HORAS_VALIDAS):
-                        _append_p95(p95_path, case_dir.name, nums)
+                        _append_p95(p95_path, name, nums)
                     else:
-                        logging.warning("%s: only %d P95 values", case_dir.name, len(nums))
+                        logging.warning("%s: only %d P95 values", name, len(nums))
             i += 2; continue
         if "95% X/Q for standard averaging intervals" in ln:
-            with intervals_out.open("a", encoding="utf-8") as f:
-                f.write(f"{case_dir.name}:\n")
-                for j in range(1, 7):
-                    if i+j < n: f.write(lines[i+j] + "\n")
+            int_buf.append(f"{name}:\n")
+            for j in range(1, 7):
+                if i+j < n: int_buf.append(lines[i+j] + "\n")
             i += 7; continue
         i += 1
+    if log_buf:
+        with log_out.open("a", encoding="utf-8") as f: f.writelines(log_buf)
+    if int_buf:
+        with intervals_out.open("a", encoding="utf-8") as f: f.writelines(int_buf)
 
 
-def _run_case(dir_name, rsf, log_out, intervals_out, exe, met_base, num_met, p95_path=None):
+def _run_case(case, exe, met_base, num_met):
+    """Run one ARCON96 case in its own directory. case = (dir_name, rsf).
+    Safe to call from several threads; log parsing is done afterwards in order."""
+    dir_name, rsf = case
     case_dir = CWD / dir_name
     _rmdir(case_dir); _ensure_writable(case_dir)
     mets = _copy_mets(met_base, case_dir, num_met)
@@ -514,8 +524,7 @@ def _run_case(dir_name, rsf, log_out, intervals_out, exe, met_base, num_met, p95
     else:
         logging.info("ARCON96 OK — %s", dir_name)
     if not (case_dir / "ISMR.log").exists():
-        logging.error("ISMR.log missing — %s", dir_name); return
-    _parse_log(case_dir, log_out, intervals_out, p95_path)
+        logging.error("ISMR.log missing — %s", dir_name)
 
 
 # ===========================================================================
@@ -552,9 +561,11 @@ def _load_p95_by_v(path, hora):
 # ===========================================================================
 # ARCON96 — CFD / TOTAL X/Q
 # ===========================================================================
-def _parse_cfd(cfd_path, hora):
-    IDX = {1:1, 2:2, 4:3, 8:4, 12:6, 24:7, 96:8, 168:9, 360:10, 720:11}
-    k = IDX[hora]
+# ISMR.cfd column holding the cumulative frequency of each averaging hour
+CFD_COL = {1:1, 2:2, 4:3, 8:4, 12:6, 24:7, 96:8, 168:9, 360:10, 720:11}
+
+def _parse_cfd(cfd_path):
+    """Return the numeric rows of an ISMR.cfd (all columns, every hour)."""
     try: raw = cfd_path.read_text(encoding="cp1252", errors="replace").splitlines()
     except Exception as e: logging.warning("Cannot read %s: %s", cfd_path, e); return []
     out = []
@@ -562,8 +573,7 @@ def _parse_cfd(cfd_path, hora):
         if any(s in ln for s in ("X/Q CUMULATIVE FREQUENCY","XOQ","Abv. Lim.","Belw. Lim.")): continue
         tokens = NUM_RE.findall(ln)
         if len(tokens) >= 12:
-            try: out.append((tokens[0], float(tokens[k])))
-            except ValueError: pass
+            out.append([float(t) for t in tokens])
     return out
 
 
@@ -579,9 +589,10 @@ def _interp_xoq(pairs, target):
     return None
 
 
-def _build_total_matrix(hora):
-    if hora not in HORAS_VALIDAS: raise ValueError(f"Invalid hour {hora}")
-    idx = HORAS_VALIDAS.index(hora)
+def _load_sector_totals():
+    """Parse the SECTOR log once for all hours.
+    Returns (v_sorted, xxx_sorted, {v: {xxx: [TOTAL X/Q per hour]}})."""
+    nh = len(HORAS_VALIDAS)
     re_case = re.compile(r"^(X_\d{3}_V_\d+):\s*(.*)$")
     re_tag  = re.compile(r"X_(\d{3})_V_(\d+)")
     data = {}; all_v = set(); all_xxx = set()
@@ -604,14 +615,16 @@ def _build_total_matrix(hora):
         if not mm: i += 1; continue
         xxx, v = mm.group(1), mm.group(2)
         all_v.add(v); all_xxx.add(xxx)
-        data.setdefault(v, {})[xxx] = max(nums[idx], data.get(v, {}).get(xxx, float("-inf")))
+        prev = data.setdefault(v, {}).get(xxx)
+        data[v][xxx] = nums[:nh] if prev is None else [max(a, b) for a, b in zip(nums, prev)]
         i += 1
     return sorted(all_v, key=int), sorted(all_xxx, key=int), data
 
 
-def _build_percent_maps(hora, targets):
-    v_sorted, _, totals = _build_total_matrix(hora)
-    perc_maps = {t: defaultdict(dict) for t in targets}
+def _build_percent_maps(totals, targets):
+    """Interpolate the target cumulative frequencies for every hour.
+    Each ISMR.cfd is read once. Returns {hora: {target: {v: {xxx: X/Q}}}}."""
+    perc_maps = {h: {t: defaultdict(dict) for t in targets} for h in HORAS_VALIDAS}
     groups = defaultdict(list)
     for d in CWD.iterdir():
         if d.is_dir():
@@ -620,22 +633,18 @@ def _build_percent_maps(hora, targets):
     for v in sorted(groups, key=int):
         for xxx, dpath in sorted(groups[v], key=lambda t: int(t[0])):
             cfd = dpath / "ISMR.cfd"
-            if not cfd.exists(): continue
-            rows = _parse_cfd(cfd, hora)
-            total = totals.get(v, {}).get(xxx)
-            if not total or total <= 0: continue
-            ac_pairs = []
-            for tok, freq in rows:
-                try:
-                    xoq = float(tok)
-                    ac = max(0.0, min(1.0, (total - freq) / total))
-                    ac_pairs.append((xoq, ac))
-                except ValueError: pass
-            if ac_pairs:
+            tot = totals.get(v, {}).get(xxx)
+            if not tot or not cfd.exists(): continue
+            rows = _parse_cfd(cfd)
+            if not rows: continue
+            for idx, hora in enumerate(HORAS_VALIDAS):
+                total = tot[idx]; k = CFD_COL[hora]
+                if not total or total <= 0: continue
+                ac_pairs = [(r[0], max(0.0, min(1.0, (total - r[k]) / total))) for r in rows]
                 for t in targets:
                     xq = _interp_xoq(ac_pairs, t)
-                    if xq is not None: perc_maps[t][v][xxx] = xq
-    return v_sorted, perc_maps
+                    if xq is not None: perc_maps[hora][t][v][xxx] = xq
+    return perc_maps
 
 
 # ===========================================================================
@@ -683,22 +692,22 @@ def _add_995_sheet(wb, sheet_name, v_sorted, pmap, hora, overall):
     tc.font = Font(bold=True); tc.alignment = Alignment(horizontal="center")
 
 
-def _build_xq_excel(xlsx_path, target=0.995):
+def _build_xq_excel(xlsx_path, v_sorted, totals, target=0.995):
     """Build the bridge Excel. Sheets named H1h…H720h (no H0h bug)."""
     wb = Workbook(); wb.remove(wb.active)
+    pmaps = _build_percent_maps(totals, [target])
     for hora in HORAS_VALIDAS:
-        vs, pmaps = _build_percent_maps(hora, [target])
         overall = _load_p95_by_v(PERCENTIL95_OVERALL, hora)
-        _add_995_sheet(wb, f"H{hora}h", vs, pmaps.get(target, {}), hora, overall)
+        _add_995_sheet(wb, f"H{hora}h", v_sorted, pmaps[hora][target], hora, overall)
     wb.save(xlsx_path)
     logging.info("Bridge Excel saved: %s", xlsx_path)
 
 
-def _build_total_excel(xlsx_path):
+def _build_total_excel(xlsx_path, vs, xxx_s, totals):
     wb = Workbook(); wb.remove(wb.active)
     bold = Font(bold=True); center = Alignment(horizontal="center")
-    for hora in HORAS_VALIDAS:
-        vs, xxx_s, data = _build_total_matrix(hora)
+    for idx, hora in enumerate(HORAS_VALIDAS):
+        data = {v: {x: nums[idx] for x, nums in row.items()} for v, row in totals.items()}
         ws = wb.create_sheet(title=f"TOTAL_{hora}h")
         ws.cell(1, 1, f"TOTAL X/Qs for averaging {hora} h").font = bold
         ws.cell(2, 1, "V").font = bold; ws.column_dimensions["A"].width = 6
@@ -867,33 +876,48 @@ def _patch_support(lines, rft, nif, inp):
 # ===========================================================================
 # RADTRAD — X/Q READER FROM BRIDGE EXCEL
 # ===========================================================================
-def read_xq_series(excel_path, distance_m, times):
-    """Read 'Maximun' column from H{t}h sheets for the given distance."""
-    xqs = []
-    for t in times:
-        sheet = f"H{int(t)}h"
-        df = pd.read_excel(excel_path, sheet_name=sheet, engine="openpyxl", header=1)
+def load_xq_table(excel_path, times):
+    """Read the 'Maximun' column of every H{t}h sheet once.
+    Returns {sheet: {distance_m: X/Q}} (first row wins on duplicate distances)."""
+    sheets = [f"H{int(t)}h" for t in times]
+    frames = pd.read_excel(excel_path, sheet_name=sheets, engine="openpyxl", header=1)
+    table = {}
+    for sheet in sheets:
+        df = frames[sheet]
         df.columns = [str(c).strip() for c in df.columns]
         if "Maximun" not in df.columns: raise KeyError(f"'Maximun' not in {sheet}")
-        df["_d"] = pd.to_numeric(df["V"], errors="coerce")
-        match = df[df["_d"] == float(distance_m)]
-        if match.empty:
-            avail = ", ".join(str(int(v)) for v in df["_d"].dropna().astype(int).unique())
+        col = {}
+        for d, xq in zip(pd.to_numeric(df["V"], errors="coerce"), df["Maximun"]):
+            if pd.notna(d): col.setdefault(float(d), xq)
+        table[sheet] = col
+    return table
+
+
+def read_xq_series(xq_table, distance_m, times):
+    """Return the 'Maximun' X/Q series for the given distance."""
+    xqs = []
+    for t in times:
+        sheet = f"H{int(t)}h"; col = xq_table[sheet]
+        if float(distance_m) not in col:
+            avail = ", ".join(str(int(v)) for v in col)
             raise ValueError(f"Distance {distance_m}m not in {sheet}. Available: {avail}")
-        xqs.append(float(match.iloc[0]["Maximun"]))
+        xq = pd.to_numeric(col[float(distance_m)], errors="coerce")
+        if pd.isna(xq):
+            raise ValueError(f"X/Q for {distance_m}m is NA in {sheet}")
+        xqs.append(float(xq))
     return xqs
 
 
 # ===========================================================================
 # RADTRAD — PSF BUILDER
 # ===========================================================================
-def build_psf(template_lines, distance_m, fracs, excel_path, support_names):
+def build_psf(template_lines, distance_m, fracs, xq_table, support_names):
     lines = list(template_lines)
     f1, f2, f3 = fracs
     _patch_support(lines, *support_names)
     idx = _locate_frac(lines)
     if idx is not None: _replace_frac(lines, idx, f1, f2, f3)
-    xqs = read_xq_series(excel_path, float(distance_m), EXPECTED_TIMES)
+    xqs = read_xq_series(xq_table, float(distance_m), EXPECTED_TIMES)
     _fill_location(lines, "Location 1:", EXPECTED_TIMES, xqs)
     _fill_location(lines, "Location 2:", EXPECTED_TIMES, xqs)
     _replace_out_name(lines, f"Test16_{distance_m}m.o0")
@@ -1042,12 +1066,13 @@ def _safe_xlsx_path(path: Path) -> Path:
 def write_sets_worst2h(out_xlsx, runs_index):
     out_xlsx.parent.mkdir(parents=True, exist_ok=True)
     out_xlsx = _safe_xlsx_path(out_xlsx)   # auto-rename if locked
-    per_set = {}
+    per_set = {}; per_eab = defaultdict(list)
     for r in runs_index:
         o0 = Path(r.get("o0_path", ""))
         if not o0.exists(): continue
         text = o0.read_text(encoding="cp1252", errors="ignore")
         w2h = parse_worst_two_hour(text); e2h = parse_eab_2h(text)
+        if e2h: per_eab[r["set_id"]].append((r, e2h))
         if w2h is None and e2h is None: continue
         per_set.setdefault(r["set_id"], []).append({
             "distance_m":       int(r["distance_m"]),
@@ -1087,15 +1112,9 @@ def write_sets_worst2h(out_xlsx, runs_index):
                 if c not in df.columns: df[c] = None
             df[COLS].to_excel(w, sheet_name=f"Set{int(sid):02d}", index=False)
         # EAB sheets
-        per_eab = defaultdict(list)
-        for r in runs_index: per_eab[r["set_id"]].append(r)
         for sid, runs in per_eab.items():
             erows = []
-            for r in runs:
-                o0 = Path(r["o0_path"])
-                if not o0.exists(): continue
-                e = parse_eab_2h(o0.read_text(encoding="cp1252", errors="ignore"))
-                if not e: continue
+            for r, e in runs:
                 erows.append({"distance_m": int(r["distance_m"]),
                     "WB_Delta_2h_mSv":   e["wb_delta_2h_rem"] * REM_TO_MSV if e.get("wb_delta_2h_rem") is not None else None,
                     "WB_Accum_2h_mSv":   e["wb_accum_2h_rem"] * REM_TO_MSV if e.get("wb_accum_2h_rem") is not None else None,
@@ -1140,20 +1159,24 @@ def write_sets_worst2h(out_xlsx, runs_index):
 # ===========================================================================
 # RADTRAD — OUTPUT ROOT MANAGEMENT & DEFAULTS COPY
 # ===========================================================================
-def _manage_out_root(path):
-    if not path.exists(): return
+def _ask_out_root_action(path):
+    """Asked at startup so the run is unattended. Returns '1', '2' or '3'."""
+    if not path.exists(): return "3"
     print(f"\n  Output folder already exists: {path}")
     print("  1=DELETE  2=RENAME  3=KEEP")
-    c = input("  Choose (ENTER=3): ").strip() or "3"
-    if c == "1": shutil.rmtree(path, ignore_errors=True)
-    elif c == "2":
+    return input("  Choose (ENTER=3): ").strip() or "3"
+
+def _manage_out_root(path, choice):
+    if not path.exists(): return
+    if choice == "1": shutil.rmtree(path, ignore_errors=True)
+    elif choice == "2":
         i = 1; new = Path(f"{path}_old_{i:02d}")
         while new.exists(): i += 1; new = Path(f"{path}_old_{i:02d}")
-        path.rename(new); print(f"  Renamed → {new}")
+        path.rename(new); logging.info("Renamed → %s", new)
 
 def _copy_defaults(target_dir):
     src = SCRIPT_DIR / "Defaults"
-    if src.exists() and src.is_dir(): copy_tree(str(src), str(target_dir / "Defaults"))
+    if src.exists() and src.is_dir(): shutil.copytree(src, target_dir / "Defaults", dirs_exist_ok=True)
     else: logging.warning("Defaults folder not found: %s", src)
 
 
@@ -1188,6 +1211,7 @@ def main():
     radtrad_exe   = p["radtrad_exe"]
     out_root      = p["out_root"]
     no_run        = p["no_run"]
+    workers       = p["workers"]
     distances     = list(range(dist_min, dist_max + 1, delta))
 
     # ── PRE-FLIGHT ───────────────────────────────────────────
@@ -1224,33 +1248,33 @@ def main():
               PERCENTIL95_OVERALL, FRECUENCIAS_SECTOR]:
         _safe_rm(f)
 
-    # 1a — OVERALL
-    logging.info("  1a) OVERALL runs")
-    _write_p95_header(PERCENTIL95_OVERALL)
-    for v in distances:
-        _run_case(f"{v:03d}_{v:02d}", _gen_rsf(num_met, v),
-                  SALIDA_LOG_OVERALL, INTERVALOS_OVERALL,
-                  ARCON_EXE, MET_BASE, num_met, p95_path=PERCENTIL95_OVERALL)
-
-    # 1b — SECTOR
-    logging.info("  1b) SECTOR runs  (16 sectors × %d distances)", len(distances))
+    # 1a/1b — OVERALL + SECTOR runs (in parallel; logs parsed afterwards in order)
     xxx_values = np.round(np.linspace(22.5, 360, 16)).astype(int)
-    for xxx in xxx_values:
-        for v in distances:
-            _run_case(f"X_{xxx:03d}_V_{v:03d}", _gen_rsf(num_met, v, xxx),
-                      SALIDAS_LOG_SECTOR, INTERVALOS_SECTOR,
-                      ARCON_EXE, MET_BASE, num_met, p95_path=None)
+    overall_cases = [(f"{v:03d}_{v:02d}", _gen_rsf(num_met, v)) for v in distances]
+    sector_cases  = [(f"X_{xxx:03d}_V_{v:03d}", _gen_rsf(num_met, v, xxx))
+                     for xxx in xxx_values for v in distances]
+    logging.info("  1a/1b) OVERALL + SECTOR runs  (%d cases, %d workers)",
+                 len(overall_cases) + len(sector_cases), workers)
+    _run_parallel(lambda c: _run_case(c, ARCON_EXE, MET_BASE, num_met),
+                  overall_cases + sector_cases, workers)
+
+    _write_p95_header(PERCENTIL95_OVERALL)
+    for name, _ in overall_cases:
+        _parse_log(CWD / name, SALIDA_LOG_OVERALL, INTERVALOS_OVERALL, PERCENTIL95_OVERALL)
+    for name, _ in sector_cases:
+        _parse_log(CWD / name, SALIDAS_LOG_SECTOR, INTERVALOS_SECTOR)
 
     # 1c — Build bridge Excel and auxiliary outputs
     logging.info("  1c) Building bridge Excel and auxiliary outputs")
     _extract_sector_maxima(SALIDAS_LOG_SECTOR, MAXIMO_SECTOR)
-    _build_xq_excel(XQ_EXCEL)           # ← Bridge: used directly by Phase 2
-    _build_total_excel(TOTAL_XQ_EXCEL)
+    v_sorted, xxx_sorted, totals = _load_sector_totals()
+    _build_xq_excel(XQ_EXCEL, v_sorted, totals)     # ← Bridge: used directly by Phase 2
+    _build_total_excel(TOTAL_XQ_EXCEL, v_sorted, xxx_sorted, totals)
     _export_max_txt(XQ_EXCEL, XQ_MAX_TXT)
     logging.info("  Bridge Excel ready: %s", XQ_EXCEL.name)
 
-    # Ask user whether to delete ARCON96 run directories
-    _ask_delete_arcon_dirs()
+    if p["del_arcon"]:
+        _delete_arcon_dirs()
 
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     # PHASE 2 — RADTRAD
@@ -1259,11 +1283,13 @@ def main():
     logging.info("PHASE 2  —  RADTRAD  (%d sets × %d distances)", nsets, len(distances))
     logging.info("=" * 62)
 
-    _manage_out_root(out_root)
+    _manage_out_root(out_root, p["out_action"])
     out_root.mkdir(parents=True, exist_ok=True)
     template_lines = _read_template(template_path)
+    xq_table = load_xq_table(XQ_EXCEL, EXPECTED_TIMES)
     acc_csv = out_root / "postprocess" / "post_timeseries_accum.csv"
     runs_index: List[Dict] = []
+    jobs: List[Tuple[int, int, Path]] = []
 
     random.seed(None); np.random.seed(None)
 
@@ -1284,43 +1310,48 @@ def main():
             dist_dir = set_dir / f"{d}_m"; dist_dir.mkdir(exist_ok=True)
             _copy_defaults(dist_dir)
             try:
-                psf_bytes = build_psf(template_lines, d, (f1, f2, f3), XQ_EXCEL, support_names)
+                psf_bytes = build_psf(template_lines, d, (f1, f2, f3), xq_table, support_names)
             except Exception as e:
                 logging.error("  PSF build failed set=%d d=%d: %s", k, d, e); continue
 
             psf_path = dist_dir / f"Test16_{d}m.psf"
             psf_path.write_bytes(psf_bytes)
             logging.info("    PSF: %s", psf_path.name)
+            jobs.append((k, d, psf_path))
 
-            rc = None
-            if not no_run:
-                rc = run_radtrad(psf_path, radtrad_exe)
-                if rc == 0: logging.info("    RADTRAD OK  → %s", psf_path.stem)
-                else:       logging.error("    RADTRAD rc=%d → %s", rc, psf_path.stem)
+    def _radtrad_job(psf_path):
+        rc = run_radtrad(psf_path, radtrad_exe)
+        if rc == 0: logging.info("    RADTRAD OK  → %s", psf_path.parent.parent.name + "/" + psf_path.stem)
+        else:       logging.error("    RADTRAD rc=%d → %s", rc, psf_path.parent.parent.name + "/" + psf_path.stem)
+        return rc
 
-            if rc == 0 or no_run:
-                o0 = psf_path.with_suffix(".o0")
-                if o0.exists():
-                    text = o0.read_text(encoding="cp1252", errors="ignore")
-                    df_case = parse_cumulative(text)
-                    if not df_case.empty:
-                        df_case["distance_m"] = d; df_case["set_id"] = k
-                        df_case["TEDE_uSv"]    = df_case["TEDE_rem"]    * FACTOR_USV
-                        df_case["Thyroid_uSv"] = df_case["Thyroid_rem"] * FACTOR_USV
-                        acc_csv.parent.mkdir(parents=True, exist_ok=True)
-                        hdr = not acc_csv.exists()
-                        with acc_csv.open("a", newline="", encoding="utf-8") as ff:
-                            writer = csv.writer(ff)
-                            if hdr: writer.writerow(df_case.columns)
-                            for _, row in df_case.iterrows():
-                                writer.writerow([row[c] for c in df_case.columns])
+    if no_run:
+        rcs = [None] * len(jobs)
+    else:
+        logging.info("  Running RADTRAD  (%d cases, %d workers)", len(jobs), workers)
+        rcs = _run_parallel(_radtrad_job, [j[2] for j in jobs], workers)
 
-            runs_index.append({
-                "distance_m": d, "set_id": k,
-                "psf_path": str(psf_path),
-                "o0_path":  str(psf_path.with_suffix(".o0")),
-                "rc": rc if rc is not None else (-1 if no_run else None),
-            })
+    for (k, d, psf_path), rc in zip(jobs, rcs):
+        if rc == 0 or no_run:
+            o0 = psf_path.with_suffix(".o0")
+            if o0.exists():
+                text = o0.read_text(encoding="cp1252", errors="ignore")
+                df_case = parse_cumulative(text)
+                if not df_case.empty:
+                    df_case["distance_m"] = d; df_case["set_id"] = k
+                    df_case["TEDE_uSv"]    = df_case["TEDE_rem"]    * FACTOR_USV
+                    df_case["Thyroid_uSv"] = df_case["Thyroid_rem"] * FACTOR_USV
+                    acc_csv.parent.mkdir(parents=True, exist_ok=True)
+                    hdr = not acc_csv.exists()
+                    with acc_csv.open("a", newline="", encoding="utf-8") as ff:
+                        df_case.to_csv(ff, header=hdr, index=False, lineterminator="\r\n")
+
+        runs_index.append({
+            "distance_m": d, "set_id": k,
+            "psf_path": str(psf_path),
+            "o0_path":  str(psf_path.with_suffix(".o0")),
+            "rc": rc if rc is not None else (-1 if no_run else None),
+        })
 
     logging.info("PHASE 2 complete%s.", " (PSFs only)" if no_run else "")
 
