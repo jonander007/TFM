@@ -13,6 +13,8 @@ Pipeline:
   PHASE 2 — RADTRAD PSF generation + batch execution
               → psf_batch/frac_set_XX/YYY_m/Test16_YYYm.psf + .o0
   PHASE 3 — Post-process: Sets_Worst2h.xlsx
+  PHASE 4 — EAB / LPZ radii and map (zonas_emergencia.py)
+              → postprocess/zonas_emergencia.json + mapa_zonas.html
 
 All interactive parameters are collected in a single session at startup.
 
@@ -48,6 +50,8 @@ from openpyxl.styles import Alignment, Font, PatternFill
 # ===========================================================================
 SCRIPT_DIR = Path(__file__).resolve().parent
 CWD        = SCRIPT_DIR / "ARCON"   # all ARCON96 runs and outputs go here
+if str(SCRIPT_DIR) not in sys.path:      # zonas_emergencia.py lives next to this script
+    sys.path.insert(0, str(SCRIPT_DIR))
 
 ARCON_EXE   = Path(r"C:\ARCON96\arcon96f.exe")
 RADTRAD_EXE = Path(r"C:\RADTRAD\RADTRAD3.03x\Distribution0203\BatchModeVersion\radtrad.exe")
@@ -318,14 +322,33 @@ def ask_all_params():
     workers   = _ask_int(f"  Parallel workers          (ENTER={def_workers}):    ", def_workers, 1, 256)
     del_arcon = _ask_yn("  Delete ARCON96 run directories after Phase 1?", default=False)
 
+    print("\n  ── Map ──────────────────────────────────────────────────")
+    ship = _ask_ship()
+
     print(f"\n{SEP}\n")
     return dict(
         num_met=num_met, dist_min=dist_min, dist_max=dist_max, delta=delta,
         template_path=template_path, nsets=nsets, fixed_sets=fixed_sets,
         support_names=(rft, nif, inp),
         radtrad_exe=radtrad_exe, out_root=out_root, out_action=out_action,
-        no_run=no_run, workers=workers, del_arcon=del_arcon,
+        no_run=no_run, workers=workers, del_arcon=del_arcon, ship=ship,
     )
+
+
+def _ask_ship():
+    """Ship position and heading for the Phase 4 map. Returns (lat, lon, heading)."""
+    from zonas_emergencia import DEFAULT_LAT, DEFAULT_LON, DEFAULT_HEADING
+    while True:
+        raw = input(f"  Ship lat,lon[,heading]  (ENTER={DEFAULT_LAT},{DEFAULT_LON},{DEFAULT_HEADING:.0f}): ").strip()
+        if not raw:
+            return DEFAULT_LAT, DEFAULT_LON, DEFAULT_HEADING
+        try:
+            v = [float(x) for x in raw.split(",")]
+            if len(v) in (2, 3) and -90 <= v[0] <= 90 and -180 <= v[1] <= 180:
+                return v[0], v[1], v[2] if len(v) == 3 else DEFAULT_HEADING
+        except ValueError:
+            pass
+        print("  Enter latitude,longitude[,heading] in decimal degrees.")
 
 
 # ===========================================================================
@@ -1191,6 +1214,7 @@ BANNER = """
 ║  PHASE 1  ARCON96   batch runs  →  Bridge Excel          ║
 ║  PHASE 2  RADTRAD   PSF + run   →  .o0 outputs           ║
 ║  PHASE 3  Post-proc             →  Sets_Worst2h.xlsx     ║
+║  PHASE 4  Zones                 →  mapa_zonas.html       ║
 ╚══════════════════════════════════════════════════════════╝
 """
 
@@ -1365,11 +1389,24 @@ def main():
     worst2h_out = out_root / "postprocess" / "Sets_Worst2h.xlsx"
     write_sets_worst2h(worst2h_out, runs_index)
 
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # PHASE 4 — EAB / LPZ RADII AND MAP
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    logging.info("=" * 62)
+    logging.info("PHASE 4  —  EAB / LPZ radii → mapa_zonas.html")
+    logging.info("=" * 62)
+    try:
+        from zonas_emergencia import generar
+        generar(out_root / "postprocess", *p["ship"])
+    except Exception as e:
+        logging.error("Zone map not generated: %s", e)
+
     logging.info("=" * 62)
     logging.info("PIPELINE COMPLETE")
     logging.info("  Bridge Excel  : %s", XQ_EXCEL.name)
     logging.info("  RADTRAD root  : %s", out_root.resolve())
     logging.info("  Sets_Worst2h  : %s", worst2h_out.name)
+    logging.info("  Zone map      : %s", (out_root / "postprocess" / "mapa_zonas.html").resolve())
     logging.info("=" * 62)
     return 0
 
