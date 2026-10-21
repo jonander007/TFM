@@ -22,6 +22,10 @@ Bug fixes vs original scripts:
   - Sheet naming: H1h (was erroneously "H0h" for 1-hour averaging)
   - EXPECTED_TIMES aligned with HORAS_VALIDAS: both [1,2,4,8,12,24,96,168,360,720]
   - A PSF is no longer written with NaN X/Q values when the bridge Excel holds "NA"
+  - ISMR.cfd columns read from the file's own period layout (1…12, 24, 48…720 h);
+    the old fixed map read the 24 h column as 12 h and the 48 h column as 24 h
+  - RADTRAD X/Q tables start at t = 0 and hold per-interval values
+    (KP-TR-012 Eq. 105) instead of the 0→t averages
 
 Performance:
   - ARCON96 and RADTRAD cases run in parallel (configurable workers; 1 = sequential)
@@ -584,20 +588,50 @@ def _load_p95_by_v(path, hora):
 # ===========================================================================
 # ARCON96 — CFD / TOTAL X/Q
 # ===========================================================================
-# ISMR.cfd column holding the cumulative frequency of each averaging hour
-CFD_COL = {1:1, 2:2, 4:3, 8:4, 12:6, 24:7, 96:8, 168:9, 360:10, 720:11}
+# ARCON96 cumulative frequencies are given for 11 averaging periods (KP-TR-012 §7.9.2),
+# one more (48 h) than HORAS_VALIDAS. The old fixed map read 24 h as 12 h and 48 h as 24 h.
+CFD_HOURS = (1, 2, 4, 8, 12, 24, 48, 96, 168, 360, 720)
+_layout_logged = set()
+
+
+def _period_layout(n_values, header=None):
+    """Averaging periods of a row of n_values per-period numbers."""
+    if header and len(header) == n_values:
+        layout = tuple(header)
+    elif n_values >= len(CFD_HOURS):
+        layout = CFD_HOURS
+    elif n_values == len(HORAS_VALIDAS):
+        layout = tuple(HORAS_VALIDAS)
+    else:
+        raise ValueError(f"Unexpected number of averaging periods: {n_values}")
+    missing = [h for h in HORAS_VALIDAS if h not in layout]
+    if missing:
+        raise ValueError(f"Averaging periods {missing} h not found in {layout}")
+    if layout not in _layout_logged:
+        _layout_logged.add(layout)
+        logging.info("ARCON96 period layout: %s h", ", ".join(map(str, layout)))
+    return layout
+
 
 def _parse_cfd(cfd_path):
-    """Return the numeric rows of an ISMR.cfd (all columns, every hour)."""
+    """Numeric rows of an ISMR.cfd as (xoq, {hour: count}) for HORAS_VALIDAS."""
     try: raw = cfd_path.read_text(encoding="cp1252", errors="replace").splitlines()
     except Exception as e: logging.warning("Cannot read %s: %s", cfd_path, e); return []
-    out = []
+    header, rows = None, []
     for ln in raw:
-        if any(s in ln for s in ("X/Q CUMULATIVE FREQUENCY","XOQ","Abv. Lim.","Belw. Lim.")): continue
+        if any(s in ln for s in ("X/Q CUMULATIVE FREQUENCY","XOQ","Abv. Lim.","Belw. Lim.")):
+            ints = [int(t) for t in re.findall(r"\b\d+\b", ln)]
+            if len(ints) >= len(HORAS_VALIDAS) and 720 in ints:   # column header with the periods
+                header = ints[ints.index(1):] if 1 in ints else ints
+            continue
         tokens = NUM_RE.findall(ln)
-        if len(tokens) >= 12:
-            out.append([float(t) for t in tokens])
-    return out
+        if len(tokens) >= len(HORAS_VALIDAS) + 1:
+            rows.append([float(t) for t in tokens])
+    if not rows:
+        return []
+    layout = _period_layout(len(rows[0]) - 1, header)
+    col = {h: 1 + layout.index(h) for h in HORAS_VALIDAS}
+    return [(r[0], {h: r[col[h]] for h in HORAS_VALIDAS}) for r in rows if len(r) > max(col.values())]
 
 
 def _interp_xoq(pairs, target):
@@ -638,6 +672,8 @@ def _load_sector_totals():
         if not mm: i += 1; continue
         xxx, v = mm.group(1), mm.group(2)
         all_v.add(v); all_xxx.add(xxx)
+        layout = _period_layout(min(len(nums), len(CFD_HOURS)))
+        nums = [nums[layout.index(h)] for h in HORAS_VALIDAS]
         prev = data.setdefault(v, {}).get(xxx)
         data[v][xxx] = nums[:nh] if prev is None else [max(a, b) for a, b in zip(nums, prev)]
         i += 1
@@ -661,9 +697,9 @@ def _build_percent_maps(totals, targets):
             rows = _parse_cfd(cfd)
             if not rows: continue
             for idx, hora in enumerate(HORAS_VALIDAS):
-                total = tot[idx]; k = CFD_COL[hora]
+                total = tot[idx]
                 if not total or total <= 0: continue
-                ac_pairs = [(r[0], max(0.0, min(1.0, (total - r[k]) / total))) for r in rows]
+                ac_pairs = [(xoq, max(0.0, min(1.0, (total - cnt[hora]) / total))) for xoq, cnt in rows]
                 for t in targets:
                     xq = _interp_xoq(ac_pairs, t)
                     if xq is not None: perc_maps[hora][t][v][xxx] = xq
@@ -931,6 +967,36 @@ def read_xq_series(xq_table, distance_m, times):
     return xqs
 
 
+_negative_logged = set()
+
+
+def interval_xq(times, xqs, label=""):
+    """Turn ARCON96 averages from 0 to t into the step table RADTRAD expects.
+
+    RADTRAD applies each value from its start time until the next one, so the table
+    must start at t = 0 and hold the X/Q of each interval, not the 0→t average
+    (KP-TR-012 Eq. 105, ARCON96 manual):
+        X/Q(t1→t2) = (t2·X/Q(0→t2) − t1·X/Q(0→t1)) / (t2 − t1)
+    and X/Q(0→2 h) = max(X/Q(0→1 h), X/Q(0→2 h)).
+    Returns (start_times, values).
+    """
+    X = dict(zip(times, xqs))
+    starts, values = [0.0], [max(X[1], X[2])]
+    later = [t for t in times if t >= 2]
+    for t1, t2 in zip(later, later[1:]):
+        v = (t2 * X[t2] - t1 * X[t1]) / (t2 - t1)
+        if v < 0:
+            # Percentiles of averages are not strictly additive; fall back to the
+            # 0→t2 average, which is conservative for that interval.
+            if (label, t1) not in _negative_logged:
+                _negative_logged.add((label, t1))
+                logging.warning("%s X/Q %g–%g h negative (%.3e): using X/Q(0→%g h)", label, t1, t2, v, t2)
+            v = X[t2]
+        starts.append(float(t1))
+        values.append(v)
+    return starts, values
+
+
 # ===========================================================================
 # RADTRAD — PSF BUILDER
 # ===========================================================================
@@ -941,8 +1007,9 @@ def build_psf(template_lines, distance_m, fracs, xq_table, support_names):
     idx = _locate_frac(lines)
     if idx is not None: _replace_frac(lines, idx, f1, f2, f3)
     xqs = read_xq_series(xq_table, float(distance_m), EXPECTED_TIMES)
-    _fill_location(lines, "Location 1:", EXPECTED_TIMES, xqs)
-    _fill_location(lines, "Location 2:", EXPECTED_TIMES, xqs)
+    starts, values = interval_xq(EXPECTED_TIMES, xqs, f"{distance_m} m:")
+    _fill_location(lines, "Location 1:", starts, values)
+    _fill_location(lines, "Location 2:", starts, values)
     _replace_out_name(lines, f"Test16_{distance_m}m.o0")
     return b"".join(lines)
 

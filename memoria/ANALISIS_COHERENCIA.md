@@ -56,8 +56,8 @@ Documento de trabajo que acompaña a `TFM_v7_revisado.docx`. La memoria revisada
 **Críticos (afectan a los resultados)**
 
 1. **Semividas del inventario**: en `Calculosfueradelacontencion.xlsx` se usó la columna «chatGPT», con errores graves (U-237: 98 min en lugar de 6,75 d; Am-243: 5 h en lugar de 7.370 años; núclidos estables con 30 años). El Anexo C hereda actividades imposibles (p. ej., 2·10²⁵ Bq de Sm-142). Hay que recalcular con NUBASE2020/ENDF y no citar herramientas de IA como fuente.
-2. **χ/Q que recibe RADTRAD** (`PIPELINE.py`): se escriben las medias de 0 a t como valores escalonados desde t = 1 h. La Ec. 105 de KP-TR-012 pide valores por intervalo, y la tabla debería empezar en t = 0.
-3. **Columnas del `.cfd`**: si son las de KP-TR-012 §7.9.2 (1, 2, 4, 8, 12, 24, 48… h), el mapeo de 12 h y 24 h está desplazado. Hay que comprobarlo con un `ISMR.cfd` real.
+2. ~~**χ/Q que recibe RADTRAD**~~ **Corregido.** La tabla del `.psf` empieza en t = 0 y usa valores por intervalo (Ec. 105 de KP-TR-012) en lugar de las medias de 0 a t. Si un intervalo sale negativo, se usa la media de 0 a t₂ y queda registrado en el log.
+3. ~~**Columnas del `.cfd`**~~ **Corregido.** El `.cfd` tiene 11 periodos (incluido 48 h). El mapeo antiguo leía la columna de 24 h como 12 h y la de 48 h como 24 h. Ahora la columna se toma de la cabecera del fichero o, sin cabecera, del número de columnas, y lo mismo con «TOTAL X/Qs». Queda confirmarlo con un `ISMR.cfd` real; el log dice qué disposición se ha usado.
 4. **Ficheros de soporte**: `tid_dba.rft` es un término fuente de reactor de agua ligera (TID-14844) y el `.nif` está normalizado a «i_SMR 530.4 MWth». No son coherentes con el término fuente mecanicista del KP-FHR a 320 MWth.
 5. **Tritio**: el cap. 8 lo presenta como contribución dominante, pero no aparece en el inventario.
 

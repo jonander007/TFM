@@ -238,7 +238,10 @@ def generar(postprocess: Path, lat: float = DEFAULT_LAT, lon: float = DEFAULT_LO
     res.update(lat=lat, lon=lon, rumbo=rumbo)
     (postprocess / "zonas_emergencia.json").write_text(
         json.dumps(res, indent=2, ensure_ascii=False), encoding="utf-8")
-    escribir_mapa(res, postprocess / "mapa_zonas.html", str(postprocess))
+    try:
+        escribir_mapa(res, postprocess / "mapa_zonas.html", str(postprocess))
+    except OSError as e:
+        logging.error("mapa_zonas.html not written (%s): keep visor_zonas.html next to this script", e)
     escribir_png(res, postprocess / "mapa_zonas.png")
     for z in res["zonas"]:
         if z["radio_m"] is None:
