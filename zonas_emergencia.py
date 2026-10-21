@@ -14,8 +14,10 @@ interpolation between the last distance that exceeds it and the next one.
 
 Outputs, next to the inputs:
   zonas_emergencia.json   radii, criteria and dose–distance envelopes
-  mapa_zonas.html         ship on the map with the EAB and LPZ circles (OpenStreetMap
-                          background; schematic SVG when there is no internet access)
+  mapa_zonas.html         interactive viewer (visor_zonas.html with the results embedded):
+                          ship on an OpenStreetMap background with the EAB and LPZ circles,
+                          editable position, heading and dose criteria, dose–distance chart;
+                          schematic view in metres when there is no internet access
   mapa_zonas.png          static schematic for reports (requires matplotlib)
 
 Usage:
@@ -173,84 +175,18 @@ def calcular_zonas(postprocess: Path) -> Dict:
 # ===========================================================================
 # MAP
 # ===========================================================================
-MAP_TEMPLATE = """<!doctype html>
-<html lang="es"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Zonas de emergencia del buque</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<style>
-  html, body, #map {{ height: 100%; margin: 0; font-family: system-ui, sans-serif; }}
-  .panel {{ background: #fff; padding: 10px 12px; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,.3);
-           font-size: 13px; line-height: 1.4; max-width: 300px; }}
-  .panel h3 {{ margin: 0 0 6px; font-size: 14px; }}
-  .sw {{ display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px;
-        vertical-align: -1px; border: 2px solid; }}
-  .ship {{ transform-origin: 50% 50%; }}
-</style></head>
-<body><div id="map"></div>
-<script>
-const DATA = {data};
-if (typeof L === 'undefined') {{ esquema(); }} else {{ mapa(); }}
-
-// Offline: schematic in local metres, no map background.
-function esquema() {{
-  const zs = DATA.zonas.filter(z => z.radio_m !== null);
-  const R = Math.max(...zs.map(z => z.radio_m), 50) * 1.15, W = 700;
-  const k = (W / 2) / R;
-  let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${{-W/2}} ${{-W/2}} ${{W}} ${{W}}" style="width:min(100vw,100vh);height:min(100vw,100vh);display:block;margin:auto;background:#eef3f7">`;
-  [...zs].sort((a, b) => b.radio_m - a.radio_m).forEach(z => {{
-    svg += `<circle r="${{z.radio_m * k}}" fill="${{z.color}}" fill-opacity=".12" stroke="${{z.color}}" stroke-width="2"/>`;
-    svg += `<text x="${{z.radio_m * k * 0.71 + 6}}" y="${{-z.radio_m * k * 0.71}}" font-size="14" fill="${{z.color}}">${{z.clave}} ${{z.radio_m.toFixed(0)}} m</text>`;
-  }});
-  svg += `<g transform="rotate(${{DATA.rumbo}})"><path d="M0,-13 L6,-4 L6,11 L-6,11 L-6,-4 Z" fill="#1f4e79"/></g>`;
-  svg += `<text x="${{-W/2 + 16}}" y="${{-W/2 + 28}}" font-size="15" font-weight="bold">${{DATA.titulo}}</text>`;
-  svg += `<text x="${{-W/2 + 16}}" y="${{-W/2 + 48}}" font-size="12" fill="#555">Esquema sin conexión — ${{DATA.lat.toFixed(4)}}, ${{DATA.lon.toFixed(4)}}</text>`;
-  svg += `<g transform="translate(${{W/2 - 30}},${{-W/2 + 50}})"><path d="M0,-22 L7,0 L0,-6 L-7,0 Z" fill="#333"/><text y="16" text-anchor="middle" font-size="13">N</text></g></svg>`;
-  document.getElementById('map').innerHTML = svg;
-}}
-
-function mapa() {{
-const map = L.map('map');
-L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
-  maxZoom: 19, attribution: '&copy; OpenStreetMap'}}).addTo(map);
-const ship = [DATA.lat, DATA.lon];
-map.setView(ship, 15);   // circles need a projected map before getBounds()
-const bounds = L.latLngBounds([ship]);
-const rows = [];
-// largest circle first so the smaller one stays clickable on top
-[...DATA.zonas].sort((a, b) => (b.radio_m || 0) - (a.radio_m || 0)).forEach(z => {{
-  if (z.radio_m === null) {{ rows.push(`<div><span class="sw" style="border-color:${{z.color}}"></span>${{z.clave}}: supera el criterio a la distancia máxima calculada (${{z.distancia_critica_m}} m)</div>`); return; }}
-  const c = L.circle(ship, {{radius: z.radio_m, color: z.color, weight: 2, fillOpacity: 0.12}}).addTo(map);
-  const pref = z.estado === 'menor_que_minimo' ? '≤ ' : '';
-  c.bindPopup(`<b>${{z.nombre}}</b><br>Radio: ${{pref}}${{z.radio_m.toFixed(0)}} m<br>Criterio: ${{z.limite_msv}} mSv TEDE (${{z.periodo}})` +
-              (z.set_critico ? `<br>Juego de fracciones más desfavorable: ${{z.set_critico}}` : ''));
-  bounds.extend(c.getBounds());
-  rows.push(`<div><span class="sw" style="border-color:${{z.color}}"></span><b>${{z.clave}}</b>: ${{pref}}${{z.radio_m.toFixed(0)}} m <span style="color:#666">(${{z.limite_msv}} mSv, ${{z.periodo}})</span></div>`);
-}});
-const icon = L.divIcon({{className: '', iconSize: [28, 28], iconAnchor: [14, 14],
-  html: `<svg class="ship" width="28" height="28" viewBox="-14 -14 28 28" style="transform: rotate(${{DATA.rumbo}}deg)">
-           <path d="M0,-13 L6,-4 L6,11 L-6,11 L-6,-4 Z" fill="#1f4e79" stroke="#fff" stroke-width="1.5"/></svg>`}});
-L.marker(ship, {{icon}}).addTo(map).bindPopup(`<b>${{DATA.buque}}</b><br>${{DATA.lat.toFixed(4)}}, ${{DATA.lon.toFixed(4)}}`);
-map.fitBounds(bounds.pad(0.25));
-const panel = L.control({{position: 'topright'}});
-panel.onAdd = () => {{ const d = L.DomUtil.create('div', 'panel');
-  d.innerHTML = `<h3>${{DATA.titulo}}</h3>${{rows.join('')}}<div style="margin-top:6px;color:#666">Radio = distancia más desfavorable (envolvente de ${{DATA.n_sets}} juegos de fracciones de yodo)</div>`;
-  return d; }};
-panel.addTo(map);
-L.control.scale({{imperial: false}}).addTo(map);
-}}
-</script></body></html>
-"""
+VISOR = Path(__file__).resolve().parent / "visor_zonas.html"
+PAGE = ('<!doctype html>\n<html lang="es"><head><meta charset="utf-8">'
+        '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">'
+        '</head><body>\n%s\n</body></html>\n')
 
 
-def escribir_mapa(resultado: Dict, html: Path, lat: float, lon: float, rumbo: float,
-                  buque: str = "Buque de referencia (KP-FHR)",
-                  titulo: str = "Zonas de emergencia — Puerto de Bilbao") -> Path:
-    n_sets = resultado.get("n_sets", 1)
-    data = dict(lat=lat, lon=lon, rumbo=rumbo, buque=buque, titulo=titulo,
-                zonas=resultado["zonas"], n_sets=n_sets)
-    html.write_text(MAP_TEMPLATE.format(data=json.dumps(data, ensure_ascii=False)), encoding="utf-8")
+def escribir_mapa(resultado: Dict, html: Path, fuente: str = "") -> Path:
+    """Interactive viewer (visor_zonas.html) with the results embedded."""
+    data = dict(resultado, _fuente=fuente or html.parent.name)
+    page = VISOR.read_text(encoding="utf-8").replace(
+        "/*DATOS*/null/*FIN*/", "/*DATOS*/%s/*FIN*/" % json.dumps(data, ensure_ascii=False))
+    html.write_text(PAGE % page, encoding="utf-8")
     return html
 
 
@@ -302,7 +238,7 @@ def generar(postprocess: Path, lat: float = DEFAULT_LAT, lon: float = DEFAULT_LO
     res.update(lat=lat, lon=lon, rumbo=rumbo)
     (postprocess / "zonas_emergencia.json").write_text(
         json.dumps(res, indent=2, ensure_ascii=False), encoding="utf-8")
-    escribir_mapa(res, postprocess / "mapa_zonas.html", lat, lon, rumbo)
+    escribir_mapa(res, postprocess / "mapa_zonas.html", str(postprocess))
     escribir_png(res, postprocess / "mapa_zonas.png")
     for z in res["zonas"]:
         if z["radio_m"] is None:
