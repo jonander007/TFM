@@ -94,6 +94,29 @@ def fix_groups(ws, radioactive_rows):
     return notes
 
 
+AF_FLIBE = (32, 33)               # AF, AG: FLiBe attenuation factor at 50 % and 95 %
+
+
+def fix_noble_gases(ws):
+    """Noble gases are not retained by the salt: AF_FLiBe = 1.
+
+    KP-TR-012-NP-A, Appendix B, Table B-4 gives a cumulative FLiBe release fraction
+    of 1.0 for noble gases and tritium. The workbook used 100 for every group, which
+    divided the noble gas release by 100 (non-conservative). Returns {row: note}.
+    """
+    notes = {}
+    for r in range(4, ws.max_row + 1):
+        if ws.cell(r, 4).value != "Gases nobles":
+            continue
+        old = [ws.cell(r, c).value for c in AF_FLIBE]
+        if all(v == 1 for v in old):
+            continue
+        for c in AF_FLIBE:
+            ws.cell(r, c, 1)
+        notes[r] = f"AF FLiBe {old[0]}/{old[1]} → 1 (gas noble, KP-TR-012 Tabla B-4)"
+    return notes
+
+
 def update_sheet(ws, wb_values, report, book):
     ws_v = wb_values[ws.title]
     ws.cell(3, COL_TXT, "T½ NUBASE2020").font = Font(bold=True)
@@ -140,6 +163,8 @@ def update_sheet(ws, wb_values, report, book):
                            actividad_nueva_Bq=new_A, grupo=""))
     if "ACCIDENT" in ws.title:          # only this layout has the per-barrier chain in V..BD
         notes = fix_groups(ws, [(r, n) for r, n, a in rows if a > 0])
+        for r, note in fix_noble_gases(ws).items():
+            notes[r] = (notes[r] + "; " if r in notes else "") + note
         for item in report:
             if item["hoja"] == ws.title and item["libro"] == book and item["fila"] in notes:
                 item["grupo"] = notes[item["fila"]]
