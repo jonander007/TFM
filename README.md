@@ -10,6 +10,7 @@ El trabajo define las zonas de emergencia (EAB y LPZ) alrededor de un metanero c
 |---|---|
 | `memoria/` | `TFM_v7_revisado.docx` (versión de trabajo, con cambios controlados y comentarios), `TFMhastael6.docx` (versión original) y `ANALISIS_COHERENCIA.md` (estado de la revisión y puntos abiertos). |
 | `herramienta/` | Herramienta de cálculo. `PIPELINE.py` encadena ARCON96, RADTRAD, el postproceso y el mapa; `zonas_emergencia.py` calcula los radios del EAB y la LPZ y genera el mapa; `visor_zonas.html` es la interfaz del mapa. Junto a ellos están las entradas que el pipeline busca en su carpeta (plantilla `.psf` y ficheros de inventario `.nif`). |
+| `herramienta/generar_nif.py` | Genera el inventario de RADTRAD (`kpfhr_terminofuente.nif`) a partir del término fuente atenuado del Excel corregido. |
 | `herramienta/legacy/` | Scripts anteriores (`NIF.py`, `RADTRAD_batch_post_integrated.py`). Su funcionalidad ya está integrada en `PIPELINE.py`; se conservan como histórico. |
 | `datos/inventario/` | Inventario del núcleo y término fuente. Los ficheros `*_NUBASE2020.xlsx` son la versión corregida, y los originales se conservan. |
 | `datos/nubase2020/` | Tabla NUBASE2020 original, lector `nubase.py` y `actualizar_semividas.py`, que regenera los libros corregidos y deja el registro en `cambios_semividas.csv`. |
@@ -33,4 +34,4 @@ python zonas_emergencia.py psf_batch/postprocess --lat 43.353 --lon -3.086 --rum
 
 ## Antes de los cálculos definitivos
 
-Ver `memoria/ANALISIS_COHERENCIA.md`. Lo principal: regenerar el inventario `.nif` (todavía tiene los nombres de nucleidos sin corregir), completar el inventario con los yodos y gases nobles de vida corta, y usar un `.rft` coherente con el término fuente del KP-FHR.
+Ver `memoria/ANALISIS_COHERENCIA.md`. Lo principal: adaptar la plantilla `.psf` (hoy es el ejemplo BWR de RADTRAD) y el `.rft` al término fuente ya atenuado, y completar el inventario con el tritio y los yodos y gases nobles de vida corta. El `.nif` ya se genera con `generar_nif.py`.

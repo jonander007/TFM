@@ -26,6 +26,8 @@ Bug fixes vs original scripts:
     the old fixed map read the 24 h column as 12 h and the 48 h column as 24 h
   - RADTRAD X/Q tables start at t = 0 and hold per-interval values
     (KP-TR-012 Eq. 105) instead of the 0→t averages
+  - PSF "Plant Power Level" set to the KP-FHR 320 MWth (template: BWR 3441 MWth),
+    and a check that every .nif nuclide has dose factors in the .inp
 
 Performance:
   - ARCON96 and RADTRAD cases run in parallel (configurable workers; 1 = sequential)
@@ -75,6 +77,10 @@ FRECUENCIAS_SECTOR  = CWD / "Frequencies_Sectors.txt"
 XQ_EXCEL       = CWD / "99_5th_PERCENTILE_XQ_VALUES_Sector_BY_HOUR.xlsx"
 TOTAL_XQ_EXCEL = CWD / "TOTAL_XQs_BY_HOUR.xlsx"
 XQ_MAX_TXT     = CWD / "XQ_Maximmun_by_hour.txt"
+
+# KP-FHR thermal power written to the .psf "Plant Power Level": RADTRAD multiplies the
+# .nif inventory (Ci/MWth) by it. The template is RADTRAD's BWR sample (3441 MWth).
+PLANT_POWER_MWTH = 320.0
 
 # Timeouts
 ARCON_TIMEOUT   = 900
@@ -187,7 +193,7 @@ def _fmt_nif(value, is_integer=False, is_halflife=False):
     return f"{val:.10E}" if is_halflife else f"{val:.4E}"
 
 
-def generate_nif(txt_path: Path, out_nif: Path) -> Path:
+def generate_nif(txt_path: Path, out_nif: Path, title: str = "KP-FHR inventory (Ci/MWth)") -> Path:
     """
     Read a Variables_NIF-style TXT (one nuclide per line, 12 tokens) and
     write a properly formatted .NIF file.  Returns the output path.
@@ -213,7 +219,7 @@ def generate_nif(txt_path: Path, out_nif: Path) -> Path:
 
     with out_nif.open("w", newline="\r\n", encoding="utf-8") as f:
         f.write(" Nuclide Inventory Name:\n")
-        f.write(" Normalized i_SMR 530.4 MWth Core Inventory\n")
+        f.write(f" {title}\n")
         f.write(" Power Level:\n")
         f.write("  0.1000E+01\n")
         f.write(" Nuclides:\n")
@@ -926,6 +932,34 @@ def _replace_first_match(lines, pattern, text):
             lines[i] = ind + text.encode() + nl; return True
     return False
 
+def _patch_power(lines, power=PLANT_POWER_MWTH):
+    ok = _replace_next_after(lines, b"Plant Power Level:", f"{power:.4E}")
+    if not ok and not _patch_power.warned:
+        _patch_power.warned = True
+        logging.warning("PSF template has no 'Plant Power Level:' line; power not set")
+    return ok
+
+
+_patch_power.warned = False
+
+
+def check_dcf(nif_path: Path, inp_path: Path):
+    """Warn about .nif nuclides with no dose conversion factors in the .inp file."""
+    if not (nif_path.exists() and inp_path.exists()):
+        logging.warning("DCF check skipped (missing %s or %s)", nif_path.name, inp_path.name)
+        return []
+    name_re = re.compile(r"\b([A-Z][a-z]?-\d{1,3}m?)\b")
+    in_nif = [l.strip() for l in nif_path.read_text(encoding="utf-8", errors="replace").splitlines()
+              if name_re.fullmatch(l.strip() or "-")]
+    known = set(name_re.findall(inp_path.read_text(encoding="cp1252", errors="replace")))
+    missing = [n for n in in_nif if n not in known]
+    if missing:
+        logging.warning("No dose factors in %s for: %s", inp_path.name, ", ".join(missing))
+    else:
+        logging.info("DCF check OK: all %d nuclides of %s are in %s", len(in_nif), nif_path.name, inp_path.name)
+    return missing
+
+
 def _patch_support(lines, rft, nif, inp):
     _replace_next_after(lines, b"Nuclide Inventory File:", f"defaults\\{nif}")
     _replace_first_match(lines, rb"\.inp(\s*$)", f"defaults\\{inp}")
@@ -1004,6 +1038,7 @@ def build_psf(template_lines, distance_m, fracs, xq_table, support_names):
     lines = list(template_lines)
     f1, f2, f3 = fracs
     _patch_support(lines, *support_names)
+    _patch_power(lines)
     idx = _locate_frac(lines)
     if idx is not None: _replace_frac(lines, idx, f1, f2, f3)
     xqs = read_xq_series(xq_table, float(distance_m), EXPECTED_TIMES)
@@ -1377,6 +1412,8 @@ def main():
     _manage_out_root(out_root, p["out_action"])
     out_root.mkdir(parents=True, exist_ok=True)
     template_lines = _read_template(template_path)
+    logging.info("PSF plant power level set to %.1f MWth (inventory .nif in Ci/MWth)", PLANT_POWER_MWTH)
+    check_dcf(SCRIPT_DIR / "Defaults" / support_names[1], SCRIPT_DIR / "Defaults" / support_names[2])
     xq_table = load_xq_table(XQ_EXCEL, EXPECTED_TIMES)
     acc_csv = out_root / "postprocess" / "post_timeseries_accum.csv"
     runs_index: List[Dict] = []
