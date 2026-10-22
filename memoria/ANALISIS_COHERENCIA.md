@@ -83,3 +83,21 @@ Documento de trabajo que acompaña a `TFM_v7_revisado.docx`. La memoria revisada
 - `herramienta/zonas_emergencia.py`: calcula los radios del EAB (peores 2 h) y de la LPZ (30 d) con la envolvente de todos los juegos de fracciones de yodo e interpolación logarítmica, y genera `zonas_emergencia.json`, `mapa_zonas.html` (Leaflet + OpenStreetMap, con esquema sin conexión) y `mapa_zonas.png` (requiere matplotlib).
 - Uso independiente: `python zonas_emergencia.py psf_batch/postprocess --lat 43.353 --lon -3.086 --rumbo 300`.
 - Verificado con ejecutables sustitutos: las salidas de las fases 1–3 son idénticas a las del script original. Falta probarlo con ARCON96 y RADTRAD reales en Windows.
+
+## 6. Segunda ronda de contenido
+
+Añadido a la memoria (cambios controlados, con comentario en cada bloque nuevo):
+
+- **Resumen y abstract** redactados (falta la frase con resultados); laburpena pendiente.
+- **Introducción**: antecedentes de los buques mercantes nucleares y cita al catálogo de SMR.
+- **Objetivos específicos** OE1–OE6, enlazados a los capítulos.
+- **Selección**: citas del método AHP (Saaty) y de SuperDecisions; justificación de por qué el criterio C3 no excluye al KP-FHR (las esferas flotan en el FLiBe, KP-TR-012).
+- **KP-FHR**: fuentes de la ficha técnica y de los apartados de seguridad (KP-TR-012, FSAR de Hermes, criterios de diseño FHR de ORNL).
+- **Accidente postulado**: apartado «Escenarios analizados» con la definición de E1 y E2 (E2 es una propuesta) y el valor de referencia de Kairos: 7,2 mSv a 335 m, el 98 % por tritio.
+- **Término fuente**: apartado «Tritio y alcance del inventario» (≈ 6.400 Ci de tritio según KP-TR-012; faltan los yodos y los gases de vida corta) y comparación del AF_FLiBe con la Tabla B-4 de KP-TR-012.
+- **Dispersión**: cita de Pasquill–Gifford y párrafo de limitaciones de la serie meteorológica.
+- **Resultados**: estructura con lo que debe ir en cada apartado.
+- **Conclusiones**: borrador de las que no dependen de los resultados, limitaciones y líneas futuras.
+- Unificado «fuente término» → «término fuente».
+
+**Hallazgo nuevo (importante):** la hoja de cálculo atenúa los gases nobles un factor 100 en el FLiBe, pero KP-TR-012 (Tabla B-4) no les atribuye retención (fracción liberada 1,0). La liberación de gases nobles está subestimada en un factor 100, lo que no es conservador. Se recomienda usar los factores por grupo químico de KP-TR-012.
