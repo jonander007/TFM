@@ -59,7 +59,7 @@ Documento de trabajo que acompaña a `TFM_v7_revisado.docx`. La memoria revisada
    - **Nombres cambiados:** 16 lantánidos no correspondían a su código ZZAAA (Ce-144 figuraba como «Sm-144», Pm-147 como «Eu-147», Eu-154 como «Dy-154»…), así que se les asignaba la semivida de otro nucleido. El código ZZAAA, comprobado con el PDF de Kairos, manda.
    - **Grupos químicos:** esos mismos nucleidos tenían los factores de atenuación del grupo equivocado (Pm en «Sr, Ba, Eu», Eu en «tierras raras»). Además, Cs-134 y U-236 no tenían factores, porque se trataban como estables. Ahora cada nucleido usa los de su grupo.
    - **Efecto:** la actividad total del núcleo pasa de 6,5·10²⁵ Bq a 1,7·10²¹ Bq. Los nucleidos estables desaparecen del Anexo C, y Cs-134 aparece con una actividad en el exterior del edificio del mismo orden que la de Cs-137.
-   - **Ficheros:** `Calculosfueradelacontencion_NUBASE2020.xlsx` y `ECC_Calculations_NUBASE2020.xlsx` (los originales se conservan) y `datos/nubase2020/cambios_semividas.csv` (detalle nucleido a nucleido). Se regeneran con `actualizar_semividas.py`.
+   - **Ficheros:** `datos/inventario/Calculosfueradelacontencion_NUBASE2020.xlsx` y `datos/inventario/ECC_Calculations_NUBASE2020.xlsx` (los originales se conservan) y `datos/nubase2020/cambios_semividas.csv` (detalle nucleido a nucleido). Se regeneran con `actualizar_semividas.py`.
 1b. **Inventario incompleto:** el juego de datos público de Kairos (89 nucleidos de la zona AZ6-RZ1) no incluye yodos radiológicos (I-131, I-133, I-135) ni varios gases nobles de vida corta, que suelen dominar la dosis. Hay que completarlo (p. ej., con ORIGEN) o justificar la omisión.
 1c. **Ficheros de inventario de RADTRAD** (`Variables_NIF_TFMNIF_COMPLETE.txt`, `i_SMR.NIF`): repiten los nombres equivocados (con la semivida y los coeficientes de dosis del nucleido equivocado). Además, la columna de actividad mezcla magnitudes: a partir de la fila 23 los valores parecen λ, no actividades. Antes de regenerarlos hay que decidir qué magnitud llevan (inventario del núcleo en Ci/MWth con las fracciones del .rft, o término fuente ya atenuado con fracción 1).
 2. ~~**χ/Q que recibe RADTRAD**~~ **Corregido.** La tabla del `.psf` empieza en t = 0 y usa valores por intervalo (Ec. 105 de KP-TR-012) en lugar de las medias de 0 a t. Si un intervalo sale negativo, se usa la media de 0 a t₂ y queda registrado en el log.
@@ -79,7 +79,7 @@ Documento de trabajo que acompaña a `TFM_v7_revisado.docx`. La memoria revisada
 
 ## 5. Software
 
-- `PIPELINE.py`: optimizado (paralelo, sin relecturas) y con una **Fase 4** nueva que llama a `zonas_emergencia.py`.
-- `zonas_emergencia.py`: calcula los radios del EAB (peores 2 h) y de la LPZ (30 d) con la envolvente de todos los juegos de fracciones de yodo e interpolación logarítmica, y genera `zonas_emergencia.json`, `mapa_zonas.html` (Leaflet + OpenStreetMap, con esquema sin conexión) y `mapa_zonas.png` (requiere matplotlib).
+- `herramienta/PIPELINE.py`: optimizado (paralelo, sin relecturas) y con una **Fase 4** nueva que llama a `zonas_emergencia.py`.
+- `herramienta/zonas_emergencia.py`: calcula los radios del EAB (peores 2 h) y de la LPZ (30 d) con la envolvente de todos los juegos de fracciones de yodo e interpolación logarítmica, y genera `zonas_emergencia.json`, `mapa_zonas.html` (Leaflet + OpenStreetMap, con esquema sin conexión) y `mapa_zonas.png` (requiere matplotlib).
 - Uso independiente: `python zonas_emergencia.py psf_batch/postprocess --lat 43.353 --lon -3.086 --rumbo 300`.
 - Verificado con ejecutables sustitutos: las salidas de las fases 1–3 son idénticas a las del script original. Falta probarlo con ARCON96 y RADTRAD reales en Windows.

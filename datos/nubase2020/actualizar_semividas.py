@@ -14,7 +14,7 @@ The "Hoja1" sheet (Anexo C of the memoria) is rebuilt with formulas pointing to
 the recalculated rows: radioactive nuclides only, sorted by core activity.
 
 Usage:
-  python actualizar_semividas.py Calculosfueradelacontencion.xlsx [ECC_Calculations.xlsx …]
+  python datos/nubase2020/actualizar_semividas.py datos/inventario/Calculosfueradelacontencion.xlsx [datos/inventario/ECC_Calculations.xlsx …]
 Writes <name>_NUBASE2020.xlsx next to each input and cambios_semividas.csv here.
 """
 
