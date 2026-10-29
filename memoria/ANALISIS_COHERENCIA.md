@@ -103,3 +103,11 @@ Añadido a la memoria (cambios controlados, con comentario en cada bloque nuevo)
 - Unificado «fuente término» → «término fuente».
 
 **Gases nobles en el FLiBe — corregido (corrección mínima).** La hoja de cálculo atenuaba los gases nobles un factor 100 en el FLiBe, pero KP-TR-012 (Tabla B-4) no les atribuye retención (fracción liberada 1,0), lo que subestimaba su liberación 100 veces (no conservador). Ahora se usa AF_FLiBe = 1 para los gases nobles (Xe-133 y Xe-135 en este inventario) y se mantiene 100 para el resto, que sigue siendo conservador frente a los factores por grupo de Kairos. El Xe-133 en el exterior del edificio pasa de 1,1·10¹¹ a 1,1·10¹³ Bq, y los gases nobles son ahora ~99 % de la actividad liberada. El cambio está en `datos/nubase2020/actualizar_semividas.py` (`fix_noble_gases`) y se refleja en los libros `*_NUBASE2020.xlsx`, el Anexo C y el texto del capítulo de término fuente.
+
+### Revisión de comentarios (última ronda)
+
+- **Directriz Básica (RD 1564/2010):** la memoria decía que el RD 524/2023 la había derogado. No es así: su disposición derogatoria deroga el RD 407/1992 (Norma Básica anterior) y el RD 1378/1985; la Directriz sigue vigente. Corregido. Comprobar el texto consolidado en el BOE antes de entregar.
+- **NuScale:** 250 MWth corresponde al módulo US460 (subida de potencia del US600, de 160 MWth). Las dimensiones del recinto usadas en el escalado son las del US600; se supone que el US460 las conserva.
+- **«Documento de referencia» de los criterios AHP:** sustituido por la guía de SMART y el TFM de Aldekoa Camba (2025), que usa la misma estructura de 10 criterios y 24 subcriterios.
+- **Nota interna sobre el término fuente sobreestimado:** reescrita en tono de memoria.
+- **Pendiente:** Anexo B (matrices y pesos del AHP obtenidos con SMART / Super Decisions 2.10) — requiere los datos del autor.
