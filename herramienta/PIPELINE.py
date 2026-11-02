@@ -79,7 +79,7 @@ TOTAL_XQ_EXCEL = CWD / "TOTAL_XQs_BY_HOUR.xlsx"
 XQ_MAX_TXT     = CWD / "XQ_Maximmun_by_hour.txt"
 
 # KP-FHR thermal power written to the .psf "Plant Power Level": RADTRAD multiplies the
-# .nif inventory (Ci/MWth) by it. The template is RADTRAD's BWR sample (3441 MWth).
+# .nif inventory (Ci/MWth) by it. RADTRAD's BWR sample template carried 3441 MWth.
 PLANT_POWER_MWTH = 320.0
 
 # Timeouts
@@ -252,11 +252,11 @@ def _ask_nif() -> str:
     Returns the filename to use inside defaults\\.
     If generation is chosen, creates the .NIF file next to the script right now.
     """
-    NIF_DEFAULT = "tid_def.nif"
+    NIF_DEFAULT = "kpfhr_terminofuente.nif"
     VAR_DEFAULT = "Variables_NIF.txt"
 
     print("\n  .nif file — choose an option:")
-    print("    1  Use existing .nif  (enter filename, default: tid_def.nif)")
+    print(f"    1  Use existing .nif  (enter filename, default: {NIF_DEFAULT})")
     print("    2  Generate from a Variables_NIF.txt file")
 
     while True:
@@ -305,7 +305,7 @@ def ask_all_params():
     delta    = _ask_int("  Distance step [m]         (ENTER=10):   ", 10, 1)
 
     print("\n  ── RADTRAD ──────────────────────────────────────────────")
-    tpl_def = SCRIPT_DIR / "template_master.psf"
+    tpl_def = SCRIPT_DIR / "template_kpfhr.psf"
     raw = input(f"  PSF template   (ENTER={tpl_def.name}): ").strip()
     template_path = Path(raw) if raw else tpl_def
 
@@ -313,7 +313,7 @@ def ask_all_params():
     fixed_sets = _ask_fractions(nsets)
 
     print("\n  ── Support files ────────────────────────────────────────")
-    DEF = ("tid_dba.rft", "fgr11&12.inp")
+    DEF = ("kpfhr_directo.rft", "fgr11&12.inp")
     rft = input(f"  .rft  (ENTER={DEF[0]}): ").strip() or DEF[0]
     nif = _ask_nif()          # Option 1: manual name  |  Option 2: generate from TXT
     inp = input(f"  .inp  (ENTER={DEF[1]}): ").strip() or DEF[1]
