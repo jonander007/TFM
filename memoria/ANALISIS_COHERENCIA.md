@@ -111,3 +111,5 @@ Añadido a la memoria (cambios controlados, con comentario en cada bloque nuevo)
 - **«Documento de referencia» de los criterios AHP:** sustituido por la guía de SMART y el TFM de Aldekoa Camba (2025), que usa la misma estructura de 10 criterios y 24 subcriterios.
 - **Nota interna sobre el término fuente sobreestimado:** reescrita en tono de memoria.
 - **Pendiente:** Anexo B (matrices y pesos del AHP obtenidos con SMART / Super Decisions 2.10) — requiere los datos del autor.
+- **Volumen de combustible:** el texto ya indica el valor y su cálculo: cilindro de 120 cm de radio y 309 cm de altura (≈ 14,0 m³, celdas K97–K98 de la hoja). Falta citar de dónde salen esas dimensiones del núcleo.
+- **Nucleidos estables en la tabla del inventario:** título corregido y frase aclaratoria. Comentario añadido: la frase «sin pérdida de representatividad» choca con la falta de yodos y gases nobles de vida corta en el inventario.
