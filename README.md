@@ -19,7 +19,7 @@ El trabajo define las zonas de emergencia (EAB y LPZ) alrededor de un metanero c
 
 ## Ejecutar la herramienta
 
-Requiere Windows con ARCON96 y RADTRAD instalados, Python 3.10 o posterior y `pip install pandas numpy openpyxl matplotlib` (matplotlib es opcional; solo se usa para la imagen PNG del mapa).
+Requiere Windows con ARCON96 y RADTRAD instalados, Python 3.10 o posterior y `pip install pandas numpy openpyxl matplotlib` (matplotlib es opcional; solo se usa para la imagen PNG del mapa). El fichero `fgr11&12.inp` debe tener factores de dosis para el H-3 (tritio), que ahora forma parte del inventario.
 
 1. En `herramienta/`, añade los ficheros meteorológicos `MET01.MET`, `MET02.MET`, … y copia a `herramienta/Defaults/` el fichero de factores de dosis `fgr11&12.inp` de RADTRAD. La carpeta ya trae el inventario (`kpfhr_terminofuente.nif`) y el fichero de liberación (`kpfhr_directo.rft`); la plantilla por defecto es `template_kpfhr.psf`.
 2. Si los ejecutables no están en `C:\ARCON96\arcon96f.exe` y `C:\RADTRAD\RADTRAD3.03x\Distribution0203\BatchModeVersion\radtrad.exe`, cambia esas rutas al principio de `PIPELINE.py`.
@@ -34,4 +34,4 @@ python zonas_emergencia.py psf_batch/postprocess --lat 43.353 --lon -3.086 --rum
 
 ## Antes de los cálculos definitivos
 
-Ver `memoria/ANALISIS_COHERENCIA.md`. La plantilla `.psf` y el `.rft` ya están adaptados al término fuente atenuado (emisión directa al ambiente, fracción 1 en 0–2 h) y el `.nif` se genera con `generar_nif.py`. Lo principal que falta es completar el inventario con el tritio y los yodos y gases nobles de vida corta.
+Ver `memoria/ANALISIS_COHERENCIA.md`. La plantilla `.psf` y el `.rft` ya están adaptados al término fuente atenuado (emisión directa al ambiente, fracción 1 en 0–2 h) y el `.nif` se genera con `generar_nif.py`. El `.nif` incluye ya el tritio (6.368 Ci, KP-TR-012). Lo principal que falta es completar el inventario con los yodos y gases nobles de vida corta.

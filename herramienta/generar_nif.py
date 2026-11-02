@@ -15,7 +15,11 @@ For each radioactive nuclide it writes the 12-token line read by PIPELINE.genera
     barium, ruthenium, cerium, lanthanum), as in the template inventory files;
   * inventory = activity outside the building (Ci) / plant power (MWth), because RADTRAD
     multiplies the .nif by the plant power level of the .psf (PIPELINE sets it to 320 MWth);
-  * daughters from the NUBASE2020 decay modes, kept only if they are in the inventory.
+  * daughters from the NUBASE2020 decay modes, kept only if they are in the inventory;
+  * tritium (H-3) added from KP-TR-012 Table B-1 (6,368 Ci in the primary system after
+    4.75 years: pebbles, reflector, vessel, piping, IHX and salt), released without
+    attenuation and transported as a gas (group 1), as in KP-TR-012 §6.4.2. Use
+    --sin-tritio to leave it out.
 
 Usage:
   python generar_nif.py [workbook] [--potencia 320] [--salida Variables_NIF_terminofuente.txt]
@@ -37,13 +41,14 @@ DEFAULT_BOOK = ROOT / "datos" / "inventario" / "Calculosfueradelacontencion_NUBA
 SHEET = "AZ6 RZ1 (ACCIDENT)"
 COL_NAME, COL_ZZ, COL_BUILDING = 2, 3, 56        # B, C, BD (95 % chain, after the building)
 BQ_PER_CI = 3.7e10
+TRITIUM_CI = 9 + 4743 + 1181 + 320 + 60 + 55     # KP-TR-012 Table B-1: salt, pebbles, reflector, vessel, piping, IHX
 
 SYM = ("n H He Li Be B C N O F Ne Na Mg Al Si P S Cl Ar K Ca Sc Ti V Cr Mn Fe Co Ni Cu Zn Ga Ge As Se "
        "Br Kr Rb Sr Y Zr Nb Mo Tc Ru Rh Pd Ag Cd In Sn Sb Te I Xe Cs Ba La Ce Pr Nd Pm Sm Eu Gd Tb Dy Ho "
        "Er Tm Yb Lu Hf Ta W Re Os Ir Pt Au Hg Tl Pb Bi Po At Rn Fr Ra Ac Th Pa U Np Pu Am Cm Bk Cf").split()
 
 # RADTRAD release groups (same numbering as the template inventory files)
-GROUP = {**{e: 1 for e in ("Xe", "Kr")}, **{e: 2 for e in ("I", "Br")}, **{e: 3 for e in ("Cs", "Rb")},
+GROUP = {**{e: 1 for e in ("Xe", "Kr", "H")}, **{e: 2 for e in ("I", "Br")}, **{e: 3 for e in ("Cs", "Rb")},
          **{e: 4 for e in ("Te", "Sb", "Se")}, "Sr": 5, "Ba": 6,
          **{e: 7 for e in ("Ru", "Rh", "Pd", "Mo", "Tc", "Co", "Ag")},
          **{e: 8 for e in ("Ce", "Pu", "Np", "U")},
@@ -77,7 +82,7 @@ def decay_modes() -> dict:
     return out
 
 
-def build(book: Path, power: float):
+def build(book: Path, power: float, tritium: bool = True):
     ws = load_workbook(book, data_only=True)[SHEET]
     modes = decay_modes()
     rows = []
@@ -91,6 +96,8 @@ def build(book: Path, power: float):
         if T is None:
             continue
         rows.append((zz, act))
+    if tritium:
+        rows.append((1003, TRITIUM_CI * BQ_PER_CI))
     present = {zz for zz, _ in rows}
     lines, total_ci = [], 0.0
     for k, (zz, act) in enumerate(sorted(rows, key=lambda x: (x[0] // 1000, x[0] % 1000)), 1):
@@ -112,8 +119,9 @@ def main():
     ap.add_argument("libro", nargs="?", type=Path, default=DEFAULT_BOOK)
     ap.add_argument("--potencia", type=float, default=320.0, help="plant power level of the .psf [MWth]")
     ap.add_argument("--salida", type=Path, default=HERE / "Variables_NIF_terminofuente.txt")
+    ap.add_argument("--sin-tritio", action="store_true", help="leave tritium (H-3) out of the inventory")
     a = ap.parse_args()
-    lines, total = build(a.libro, a.potencia)
+    lines, total = build(a.libro, a.potencia, tritium=not a.sin_tritio)
     a.salida.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(f"{a.salida}: {len(lines)} nuclides, {total:.4E} Ci outside the building "
           f"({total / a.potencia:.4E} Ci/MWth at {a.potencia:g} MWth)")
