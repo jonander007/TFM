@@ -118,6 +118,8 @@ def setup_logging():
         level=logging.INFO,
         format="%(asctime)s  %(levelname)-8s  %(message)s",
         datefmt="%H:%M:%S",
+        handlers=[logging.StreamHandler(),
+                  logging.FileHandler(SCRIPT_DIR / "pipeline.log", mode="w", encoding="utf-8")],
     )
     logging.info("Python %s  |  Script: %s", sys.version.split()[0], SCRIPT_DIR)
 
@@ -299,7 +301,7 @@ def ask_all_params():
     print(f"\n{SEP}\n  PIPELINE — unified parameter setup\n{SEP}")
 
     print("\n  ── ARCON96 ──────────────────────────────────────────────")
-    num_met  = _ask_int("  MET files count           (ENTER=1):    ", 1,  1, 99)
+    num_met  = _ask_int("  MET files count           (ENTER=5):    ", 5,  1, 99)
     dist_min = _ask_int("  Minimum distance [m]      (ENTER=10):   ", 10, 1)
     dist_max = _ask_int("  Maximum distance [m]      (ENTER=400):  ", 400, dist_min+1)
     delta    = _ask_int("  Distance step [m]         (ENTER=10):   ", 10, 1)

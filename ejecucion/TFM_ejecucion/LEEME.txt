@@ -1,0 +1,45 @@
+TFM - Zonas de emergencia (EAB y LPZ) para un buque con KP-FHR en el puerto de Bilbao
+Carpeta de ejecución
+====================================================================================
+
+QUÉ HAY
+  PIPELINE.py            Cadena completa: ARCON96 -> χ/Q -> RADTRAD -> dosis -> radios -> mapa.
+  zonas_emergencia.py    Radios del EAB (250 mSv, peores 2 h) y la LPZ (250 mSv, 30 d) y mapa.
+  visor_zonas.html       Plantilla del mapa (Leaflet). El resultado se escribe en psf_batch\postprocess.
+  template_kpfhr.psf     Escenario de RADTRAD: emisión directa al ambiente, 320 MWth.
+  MET01.MET … MET05.MET  Meteorología horaria preparada para ARCON96 (10 m y 58 m).
+  Defaults\
+    kpfhr_terminofuente.nif   Inventario (Ci/MWth): término fuente fuera del edificio + 6.368 Ci de tritio.
+    kpfhr_directo.rft         Fracción 1 para todos los grupos, liberada entre 0 y 2 h.
+    fgr11&12.inp              Factores de dosis de RADTRAD con el H-3 añadido.
+    MHA.rft, fgr11&12_original.inp   Originales, solo como referencia.
+
+REQUISITOS
+  * Windows con ARCON96 y RADTRAD 3.03 (modo batch) instalados.
+    Rutas por defecto (cámbialas al principio de PIPELINE.py si son otras):
+      C:\ARCON96\arcon96f.exe
+      C:\RADTRAD\RADTRAD3.03x\Distribution0203\BatchModeVersion\radtrad.exe
+  * Python 3.10 o posterior (python.org, marcando "Add python to PATH").
+
+CÓMO EJECUTAR
+  1. Copia esta carpeta a una ruta sin espacios ni acentos (por ejemplo C:\TFM_ejecucion).
+  2. Doble clic en EJECUTAR.bat (instala pandas, numpy, openpyxl y matplotlib y lanza el pipeline).
+     O bien, desde una consola en esta carpeta:  python PIPELINE.py
+  3. Todas las preguntas se hacen al principio. Pulsa ENTER para aceptar los valores por defecto:
+       MET files count 5 · distancias 10 a 400 m cada 10 m · 6 juegos de fracciones de yodo
+       plantilla template_kpfhr.psf · kpfhr_directo.rft · kpfhr_terminofuente.nif · fgr11&12.inp
+       posición del buque 43.3530, -3.0860, rumbo 300 (puerto exterior de Bilbao)
+     Si el radio de alguna zona supera 400 m, repite con una distancia máxima mayor
+     (hasta 1.200 m, límite de validez de ARCON96 según KP-TR-012).
+  4. Al terminar, abre psf_batch\postprocess\mapa_zonas.html (mapa con el buque y las zonas).
+     Los radios están en psf_batch\postprocess\zonas_emergencia.json y la imagen en mapa_zonas.png.
+
+QUÉ ENVIARME PARA LA MEMORIA
+  Comprime y envía:  ARCON\  (sobre todo los .xlsx y .txt de χ/Q)  y  psf_batch\postprocess\
+  y el registro de la ejecución, pipeline.log, que se crea en esta carpeta.
+
+ANTES DE EJECUTAR, COMPRUEBA
+  * Con el EXAMPLE.MET de tu ARCON96: que el viento va en 3 cifras de dirección + 3 de velocidad
+    (décimas de m/s) y que 999/99 se acepta como dato ausente. Si no, avísame y regenero los MET.
+  * Que RADTRAD acepta el caudal de 1,0E+06 cfm del camino 2 de template_kpfhr.psf
+    (si no, pon 1,0E+05 en las dos líneas de ese camino).

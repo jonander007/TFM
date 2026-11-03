@@ -1,0 +1,891 @@
+<title>Visor de Zonas de Emergencia</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Leaflet 1.9.4 (BSD-2-Clause) */
+.leaflet-pane,
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-tile-container,
+.leaflet-pane > svg,
+.leaflet-pane > canvas,
+.leaflet-zoom-box,
+.leaflet-image-layer,
+.leaflet-layer {
+position: absolute;
+left: 0;
+top: 0;
+}
+.leaflet-container {
+overflow: hidden;
+}
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+-webkit-user-select: none;
+-moz-user-select: none;
+user-select: none;
+-webkit-user-drag: none;
+}
+.leaflet-tile::selection {
+background: transparent;
+}
+.leaflet-safari .leaflet-tile {
+image-rendering: -webkit-optimize-contrast;
+}
+.leaflet-safari .leaflet-tile-container {
+width: 1600px;
+height: 1600px;
+-webkit-transform-origin: 0 0;
+}
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+display: block;
+}
+.leaflet-container .leaflet-overlay-pane svg {
+max-width: none !important;
+max-height: none !important;
+}
+.leaflet-container .leaflet-marker-pane img,
+.leaflet-container .leaflet-shadow-pane img,
+.leaflet-container .leaflet-tile-pane img,
+.leaflet-container img.leaflet-image-layer,
+.leaflet-container .leaflet-tile {
+max-width: none !important;
+max-height: none !important;
+width: auto;
+padding: 0;
+}
+.leaflet-container img.leaflet-tile {
+mix-blend-mode: plus-lighter;
+}
+.leaflet-container.leaflet-touch-zoom {
+-ms-touch-action: pan-x pan-y;
+touch-action: pan-x pan-y;
+}
+.leaflet-container.leaflet-touch-drag {
+-ms-touch-action: pinch-zoom;
+touch-action: none;
+touch-action: pinch-zoom;
+}
+.leaflet-container.leaflet-touch-drag.leaflet-touch-zoom {
+-ms-touch-action: none;
+touch-action: none;
+}
+.leaflet-container {
+-webkit-tap-highlight-color: transparent;
+}
+.leaflet-container a {
+-webkit-tap-highlight-color: rgba(51, 181, 229, 0.4);
+}
+.leaflet-tile {
+filter: inherit;
+visibility: hidden;
+}
+.leaflet-tile-loaded {
+visibility: inherit;
+}
+.leaflet-zoom-box {
+width: 0;
+height: 0;
+-moz-box-sizing: border-box;
+box-sizing: border-box;
+z-index: 800;
+}
+.leaflet-overlay-pane svg {
+-moz-user-select: none;
+}
+.leaflet-pane         { z-index: 400; }
+.leaflet-tile-pane    { z-index: 200; }
+.leaflet-overlay-pane { z-index: 400; }
+.leaflet-shadow-pane  { z-index: 500; }
+.leaflet-marker-pane  { z-index: 600; }
+.leaflet-tooltip-pane   { z-index: 650; }
+.leaflet-popup-pane   { z-index: 700; }
+.leaflet-map-pane canvas { z-index: 100; }
+.leaflet-map-pane svg    { z-index: 200; }
+.leaflet-vml-shape {
+width: 1px;
+height: 1px;
+}
+.lvml {
+behavior: url(#default#VML);
+display: inline-block;
+position: absolute;
+}
+.leaflet-control {
+position: relative;
+z-index: 800;
+pointer-events: visiblePainted;
+pointer-events: auto;
+}
+.leaflet-top,
+.leaflet-bottom {
+position: absolute;
+z-index: 1000;
+pointer-events: none;
+}
+.leaflet-top {
+top: 0;
+}
+.leaflet-right {
+right: 0;
+}
+.leaflet-bottom {
+bottom: 0;
+}
+.leaflet-left {
+left: 0;
+}
+.leaflet-control {
+float: left;
+clear: both;
+}
+.leaflet-right .leaflet-control {
+float: right;
+}
+.leaflet-top .leaflet-control {
+margin-top: 10px;
+}
+.leaflet-bottom .leaflet-control {
+margin-bottom: 10px;
+}
+.leaflet-left .leaflet-control {
+margin-left: 10px;
+}
+.leaflet-right .leaflet-control {
+margin-right: 10px;
+}
+.leaflet-fade-anim .leaflet-popup {
+opacity: 0;
+-webkit-transition: opacity 0.2s linear;
+-moz-transition: opacity 0.2s linear;
+transition: opacity 0.2s linear;
+}
+.leaflet-fade-anim .leaflet-map-pane .leaflet-popup {
+opacity: 1;
+}
+.leaflet-zoom-animated {
+-webkit-transform-origin: 0 0;
+-ms-transform-origin: 0 0;
+transform-origin: 0 0;
+}
+svg.leaflet-zoom-animated {
+will-change: transform;
+}
+.leaflet-zoom-anim .leaflet-zoom-animated {
+-webkit-transition: -webkit-transform 0.25s cubic-bezier(0,0,0.25,1);
+-moz-transition:    -moz-transform 0.25s cubic-bezier(0,0,0.25,1);
+transition:         transform 0.25s cubic-bezier(0,0,0.25,1);
+}
+.leaflet-zoom-anim .leaflet-tile,
+.leaflet-pan-anim .leaflet-tile {
+-webkit-transition: none;
+-moz-transition: none;
+transition: none;
+}
+.leaflet-zoom-anim .leaflet-zoom-hide {
+visibility: hidden;
+}
+.leaflet-interactive {
+cursor: pointer;
+}
+.leaflet-grab {
+cursor: -webkit-grab;
+cursor:    -moz-grab;
+cursor:         grab;
+}
+.leaflet-crosshair,
+.leaflet-crosshair .leaflet-interactive {
+cursor: crosshair;
+}
+.leaflet-popup-pane,
+.leaflet-control {
+cursor: auto;
+}
+.leaflet-dragging .leaflet-grab,
+.leaflet-dragging .leaflet-grab .leaflet-interactive,
+.leaflet-dragging .leaflet-marker-draggable {
+cursor: move;
+cursor: -webkit-grabbing;
+cursor:    -moz-grabbing;
+cursor:         grabbing;
+}
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-image-layer,
+.leaflet-pane > svg path,
+.leaflet-tile-container {
+pointer-events: none;
+}
+.leaflet-marker-icon.leaflet-interactive,
+.leaflet-image-layer.leaflet-interactive,
+.leaflet-pane > svg path.leaflet-interactive,
+svg.leaflet-image-layer.leaflet-interactive path {
+pointer-events: visiblePainted;
+pointer-events: auto;
+}
+.leaflet-container {
+background: #ddd;
+outline-offset: 1px;
+}
+.leaflet-container a {
+color: #0078A8;
+}
+.leaflet-zoom-box {
+border: 2px dotted #38f;
+background: rgba(255,255,255,0.5);
+}
+.leaflet-container {
+font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
+font-size: 12px;
+font-size: 0.75rem;
+line-height: 1.5;
+}
+.leaflet-bar {
+box-shadow: 0 1px 5px rgba(0,0,0,0.65);
+border-radius: 4px;
+}
+.leaflet-bar a {
+background-color: #fff;
+border-bottom: 1px solid #ccc;
+width: 26px;
+height: 26px;
+line-height: 26px;
+display: block;
+text-align: center;
+text-decoration: none;
+color: black;
+}
+.leaflet-bar a,
+.leaflet-control-layers-toggle {
+background-position: 50% 50%;
+background-repeat: no-repeat;
+display: block;
+}
+.leaflet-bar a:hover,
+.leaflet-bar a:focus {
+background-color: #f4f4f4;
+}
+.leaflet-bar a:first-child {
+border-top-left-radius: 4px;
+border-top-right-radius: 4px;
+}
+.leaflet-bar a:last-child {
+border-bottom-left-radius: 4px;
+border-bottom-right-radius: 4px;
+border-bottom: none;
+}
+.leaflet-bar a.leaflet-disabled {
+cursor: default;
+background-color: #f4f4f4;
+color: #bbb;
+}
+.leaflet-touch .leaflet-bar a {
+width: 30px;
+height: 30px;
+line-height: 30px;
+}
+.leaflet-touch .leaflet-bar a:first-child {
+border-top-left-radius: 2px;
+border-top-right-radius: 2px;
+}
+.leaflet-touch .leaflet-bar a:last-child {
+border-bottom-left-radius: 2px;
+border-bottom-right-radius: 2px;
+}
+.leaflet-control-zoom-in,
+.leaflet-control-zoom-out {
+font: bold 18px 'Lucida Console', Monaco, monospace;
+text-indent: 1px;
+}
+.leaflet-touch .leaflet-control-zoom-in, .leaflet-touch .leaflet-control-zoom-out  {
+font-size: 22px;
+}
+.leaflet-control-layers {
+box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+background: #fff;
+border-radius: 5px;
+}
+.leaflet-control-layers-toggle {
+background-image: url(images/layers.png);
+width: 36px;
+height: 36px;
+}
+.leaflet-retina .leaflet-control-layers-toggle {
+background-image: url(images/layers-2x.png);
+background-size: 26px 26px;
+}
+.leaflet-touch .leaflet-control-layers-toggle {
+width: 44px;
+height: 44px;
+}
+.leaflet-control-layers .leaflet-control-layers-list,
+.leaflet-control-layers-expanded .leaflet-control-layers-toggle {
+display: none;
+}
+.leaflet-control-layers-expanded .leaflet-control-layers-list {
+display: block;
+position: relative;
+}
+.leaflet-control-layers-expanded {
+padding: 6px 10px 6px 6px;
+color: #333;
+background: #fff;
+}
+.leaflet-control-layers-scrollbar {
+overflow-y: scroll;
+overflow-x: hidden;
+padding-right: 5px;
+}
+.leaflet-control-layers-selector {
+margin-top: 2px;
+position: relative;
+top: 1px;
+}
+.leaflet-control-layers label {
+display: block;
+font-size: 13px;
+font-size: 1.08333em;
+}
+.leaflet-control-layers-separator {
+height: 0;
+border-top: 1px solid #ddd;
+margin: 5px -10px 5px -6px;
+}
+.leaflet-default-icon-path {
+background-image: url(images/marker-icon.png);
+}
+.leaflet-container .leaflet-control-attribution {
+background: #fff;
+background: rgba(255, 255, 255, 0.8);
+margin: 0;
+}
+.leaflet-control-attribution,
+.leaflet-control-scale-line {
+padding: 0 5px;
+color: #333;
+line-height: 1.4;
+}
+.leaflet-control-attribution a {
+text-decoration: none;
+}
+.leaflet-control-attribution a:hover,
+.leaflet-control-attribution a:focus {
+text-decoration: underline;
+}
+.leaflet-attribution-flag {
+display: inline !important;
+vertical-align: baseline !important;
+width: 1em;
+height: 0.6669em;
+}
+.leaflet-left .leaflet-control-scale {
+margin-left: 5px;
+}
+.leaflet-bottom .leaflet-control-scale {
+margin-bottom: 5px;
+}
+.leaflet-control-scale-line {
+border: 2px solid #777;
+border-top: none;
+line-height: 1.1;
+padding: 2px 5px 1px;
+white-space: nowrap;
+-moz-box-sizing: border-box;
+box-sizing: border-box;
+background: rgba(255, 255, 255, 0.8);
+text-shadow: 1px 1px #fff;
+}
+.leaflet-control-scale-line:not(:first-child) {
+border-top: 2px solid #777;
+border-bottom: none;
+margin-top: -2px;
+}
+.leaflet-control-scale-line:not(:first-child):not(:last-child) {
+border-bottom: 2px solid #777;
+}
+.leaflet-touch .leaflet-control-attribution,
+.leaflet-touch .leaflet-control-layers,
+.leaflet-touch .leaflet-bar {
+box-shadow: none;
+}
+.leaflet-touch .leaflet-control-layers,
+.leaflet-touch .leaflet-bar {
+border: 2px solid rgba(0,0,0,0.2);
+background-clip: padding-box;
+}
+.leaflet-popup {
+position: absolute;
+text-align: center;
+margin-bottom: 20px;
+}
+.leaflet-popup-content-wrapper {
+padding: 1px;
+text-align: left;
+border-radius: 12px;
+}
+.leaflet-popup-content {
+margin: 13px 24px 13px 20px;
+line-height: 1.3;
+font-size: 13px;
+font-size: 1.08333em;
+min-height: 1px;
+}
+.leaflet-popup-content p {
+margin: 17px 0;
+margin: 1.3em 0;
+}
+.leaflet-popup-tip-container {
+width: 40px;
+height: 20px;
+position: absolute;
+left: 50%;
+margin-top: -1px;
+margin-left: -20px;
+overflow: hidden;
+pointer-events: none;
+}
+.leaflet-popup-tip {
+width: 17px;
+height: 17px;
+padding: 1px;
+margin: -10px auto 0;
+pointer-events: auto;
+-webkit-transform: rotate(45deg);
+-moz-transform: rotate(45deg);
+-ms-transform: rotate(45deg);
+transform: rotate(45deg);
+}
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+background: white;
+color: #333;
+box-shadow: 0 3px 14px rgba(0,0,0,0.4);
+}
+.leaflet-container a.leaflet-popup-close-button {
+position: absolute;
+top: 0;
+right: 0;
+border: none;
+text-align: center;
+width: 24px;
+height: 24px;
+font: 16px/24px Tahoma, Verdana, sans-serif;
+color: #757575;
+text-decoration: none;
+background: transparent;
+}
+.leaflet-container a.leaflet-popup-close-button:hover,
+.leaflet-container a.leaflet-popup-close-button:focus {
+color: #585858;
+}
+.leaflet-popup-scrolled {
+overflow: auto;
+}
+.leaflet-oldie .leaflet-popup-content-wrapper {
+-ms-zoom: 1;
+}
+.leaflet-oldie .leaflet-popup-tip {
+width: 24px;
+margin: 0 auto;
+-ms-filter: "progid:DXImageTransform.Microsoft.Matrix(M11=0.70710678, M12=0.70710678, M21=-0.70710678, M22=0.70710678)";
+filter: progid:DXImageTransform.Microsoft.Matrix(M11=0.70710678, M12=0.70710678, M21=-0.70710678, M22=0.70710678);
+}
+.leaflet-oldie .leaflet-control-zoom,
+.leaflet-oldie .leaflet-control-layers,
+.leaflet-oldie .leaflet-popup-content-wrapper,
+.leaflet-oldie .leaflet-popup-tip {
+border: 1px solid #999;
+}
+.leaflet-div-icon {
+background: #fff;
+border: 1px solid #666;
+}
+.leaflet-tooltip {
+position: absolute;
+padding: 6px;
+background-color: #fff;
+border: 1px solid #fff;
+border-radius: 3px;
+color: #222;
+white-space: nowrap;
+-webkit-user-select: none;
+-moz-user-select: none;
+-ms-user-select: none;
+user-select: none;
+pointer-events: none;
+box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+.leaflet-tooltip.leaflet-interactive {
+cursor: pointer;
+pointer-events: auto;
+}
+.leaflet-tooltip-top:before,
+.leaflet-tooltip-bottom:before,
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before {
+position: absolute;
+pointer-events: none;
+border: 6px solid transparent;
+background: transparent;
+content: "";
+}
+.leaflet-tooltip-bottom {
+margin-top: 6px;
+}
+.leaflet-tooltip-top {
+margin-top: -6px;
+}
+.leaflet-tooltip-bottom:before,
+.leaflet-tooltip-top:before {
+left: 50%;
+margin-left: -6px;
+}
+.leaflet-tooltip-top:before {
+bottom: 0;
+margin-bottom: -12px;
+border-top-color: #fff;
+}
+.leaflet-tooltip-bottom:before {
+top: 0;
+margin-top: -12px;
+margin-left: -6px;
+border-bottom-color: #fff;
+}
+.leaflet-tooltip-left {
+margin-left: -6px;
+}
+.leaflet-tooltip-right {
+margin-left: 6px;
+}
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before {
+top: 50%;
+margin-top: -6px;
+}
+.leaflet-tooltip-left:before {
+right: 0;
+margin-right: -12px;
+border-left-color: #fff;
+}
+.leaflet-tooltip-right:before {
+left: 0;
+margin-left: -12px;
+border-right-color: #fff;
+}
+@media print {
+.leaflet-control {
+-webkit-print-color-adjust: exact;
+print-color-adjust: exact;
+}
+}
+/* Layout: chart-room console — instrument panel on the left, harbour map filling the rest. */
+:root {
+  --bg: #f3f5f7;
+  --panel: #ffffff;
+  --ink: #14212e;
+  --muted: #5b6b7a;
+  --line: #d8dee5;
+  --accent: #1d5c8c;
+  --eab: #c0392b;
+  --lpz: #d9822b;
+  --sea: #dfe8ef;
+  --ok: #2f7d4f;
+  --warn: #a35a00;
+  --f-display: "Barlow Semi Condensed", "Arial Narrow", sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, sans-serif;
+  --f-data: "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f161d; --panel: #16212b; --ink: #e3eaf0; --muted: #93a3b3; --line: #2a3946;
+  --accent: #6fb0e0; --eab: #ef6b5b; --lpz: #f2a44f; --sea: #1b2833; --ok: #5cbf86; --warn: #e8a24a; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0f161d; --panel: #16212b; --ink: #e3eaf0; --muted: #93a3b3; --line: #2a3946;
+  --accent: #6fb0e0; --eab: #ef6b5b; --lpz: #f2a44f; --sea: #1b2833; --ok: #5cbf86; --warn: #e8a24a; color-scheme: dark }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 var(--f-body); }
+.app { display: grid; grid-template-columns: minmax(300px, 360px) 1fr; height: 100%; }
+.panel { background: var(--panel); border-right: 1px solid var(--line); overflow-y: auto;
+  padding-block: 18px 24px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: 16px;
+  display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.mapwrap { position: relative; min-width: 0; background: var(--sea); }
+#map, #esquema { position: absolute; inset: 0; }
+#esquema svg { width: 100%; height: 100%; display: block; }
+h1 { font: 700 22px/1.1 var(--f-display); letter-spacing: .01em; margin: 0; text-wrap: balance; }
+.sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+.tag { display: inline-block; font: 500 11px var(--f-data); letter-spacing: .04em; text-transform: uppercase;
+  padding: 3px 7px; border-radius: 3px; background: color-mix(in srgb, var(--warn) 14%, transparent); color: var(--warn); }
+section { display: flex; flex-direction: column; gap: 8px; }
+h2 { font: 600 12px var(--f-data); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); min-width: 0; }
+input, select { font: 14px var(--f-data); color: var(--ink); background: var(--bg); border: 1px solid var(--line);
+  border-radius: 4px; padding: 6px 7px; width: 100%; box-sizing: border-box; font-variant-numeric: tabular-nums; }
+input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+button { font: 500 13px var(--f-body); color: var(--accent); background: transparent; border: 1px solid var(--accent);
+  border-radius: 4px; padding: 6px 10px; cursor: pointer; }
+button:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.hint { font-size: 12px; color: var(--muted); margin: 0; }
+.zones { display: flex; flex-direction: column; gap: 8px; }
+.zone { display: grid; grid-template-columns: 6px 1fr auto; gap: 10px; align-items: center;
+  border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px 10px 0; overflow: hidden; }
+.zone .bar { align-self: stretch; }
+.zone .name { font: 600 15px var(--f-display); letter-spacing: .02em; }
+.zone .crit { font-size: 12px; color: var(--muted); }
+.zone .r { font: 500 22px var(--f-data); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.zone .r small { font-size: 12px; color: var(--muted); }
+.zone .st { grid-column: 2 / 4; font-size: 12px; color: var(--muted); }
+.chart svg { width: 100%; height: auto; display: block; }
+.chart text { font: 10px var(--f-data); fill: var(--muted); }
+.foot { font-size: 11px; color: var(--muted); margin-top: auto; }
+.mapnote { position: absolute; left: 12px; top: calc(12px + env(safe-area-inset-top, 0px)); z-index: 500;
+  background: var(--panel); color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 5px 8px; font-size: 12px; }
+.leaflet-container { background: var(--sea); font-family: var(--f-body); }
+@media (max-width: 760px) {
+  .app { grid-template-columns: 1fr; grid-template-rows: 55vh auto; height: auto; }
+  .mapwrap { order: -1; height: 55vh; }
+  .panel { border-right: 0; padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="app">
+  <aside class="panel">
+    <header>
+      <h1>Zonas de emergencia del buque</h1>
+      <div class="sub">EAB y LPZ a partir de los resultados de ARCON96 + RADTRAD</div>
+      <div id="demo" class="tag" style="margin-top:8px" hidden>Datos de ejemplo sintéticos</div>
+    </header>
+
+    <section>
+      <h2>Resultados</h2>
+      <div class="zones" id="zones"></div>
+    </section>
+
+    <section>
+      <h2>Buque</h2>
+      <div class="grid3">
+        <label for="lat">Latitud<input id="lat" type="number" step="0.0001"></label>
+        <label for="lon">Longitud<input id="lon" type="number" step="0.0001"></label>
+        <label for="rumbo">Rumbo (°)<input id="rumbo" type="number" step="5" min="0" max="360"></label>
+      </div>
+      <label for="atraque">Atraque
+        <select id="atraque">
+          <option value="">Posición personalizada</option>
+          <option value="43.3530,-3.0860">Puerto exterior, Zierbena (aprox.)</option>
+          <option value="43.3330,-3.0300">Santurtzi (aprox.)</option>
+        </select>
+      </label>
+      <p class="hint" id="movehint">Haz clic en el mapa o arrastra el buque para moverlo.</p>
+    </section>
+
+    <section>
+      <h2>Criterios de dosis (TEDE)</h2>
+      <div class="grid2">
+        <label for="limEAB">EAB, peores 2 h (mSv)<input id="limEAB" type="number" min="0.1" step="10"></label>
+        <label for="limLPZ">LPZ, 30 días (mSv)<input id="limLPZ" type="number" min="0.1" step="10"></label>
+      </div>
+      <p class="hint">Por defecto, 250 mSv (25 rem): 10 CFR 50.34 y RG 1.183.</p>
+    </section>
+
+    <section class="chart">
+      <h2>Dosis frente a distancia (envolvente)</h2>
+      <div id="chart"></div>
+    </section>
+
+    <section>
+      <h2>Datos</h2>
+      <label for="file">Cargar zonas_emergencia.json<input id="file" type="file" accept=".json,application/json"></label>
+      <p class="hint" id="src"></p>
+    </section>
+
+    <div class="foot">Radio = menor distancia a partir de la cual la envolvente de todos los juegos de fracciones de yodo no supera el criterio (interpolación logarítmica). Circunferencias centradas en el buque con el χ/Q del sector más desfavorable.</div>
+  </aside>
+
+  <main class="mapwrap">
+    <div id="map"></div>
+    <div id="esquema" hidden></div>
+    <div class="mapnote" id="mapnote" hidden>Sin cartografía disponible: vista esquemática en metros</div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const EMBEDDED = /*DATOS*/null/*FIN*/;
+const DEFAULT = { lat: 43.3530, lon: -3.0860, rumbo: 300 };
+const S = { data: null, lat: DEFAULT.lat, lon: DEFAULT.lon, rumbo: DEFAULT.rumbo, lim: { EAB: 250, LPZ: 250 }, mode: "map" };
+const ZMETA = {
+  EAB: { name: "EAB", long: "Límite del área de exclusión", periodo: "peores 2 h", color: () => css("--eab") },
+  LPZ: { name: "LPZ", long: "Zona de baja población", periodo: "30 días", color: () => css("--lpz") },
+};
+const $ = id => document.getElementById(id);
+function css(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+const fmt = (x, d = 0) => x.toLocaleString("es-ES", { maximumFractionDigits: d, minimumFractionDigits: d });
+
+// Same rule as zonas_emergencia.radio(): last distance above the limit, then log-linear interpolation.
+function radio(env, L) {
+  const d = env.map(r => r.distance_m), D = env.map(r => r.dosis_msv);
+  let k = -1;
+  D.forEach((v, i) => { if (v > L) k = i; });
+  const worst = env.reduce((a, b) => (b.dosis_msv > a.dosis_msv ? b : a), env[0]);
+  if (k < 0) return { r: d[0], estado: "menor_que_minimo" };
+  if (k === d.length - 1) return { r: null, estado: "mayor_que_maximo", dcrit: d[k], set: worst.set_id };
+  const f = (D[k] > 0 && D[k + 1] > 0)
+    ? (Math.log(D[k]) - Math.log(L)) / (Math.log(D[k]) - Math.log(D[k + 1]))
+    : (D[k] - L) / (D[k] - D[k + 1]);
+  return { r: d[k] + f * (d[k + 1] - d[k]), estado: "interpolado", dcrit: d[k], set: worst.set_id };
+}
+
+function zonas() {
+  return ["EAB", "LPZ"].map(k => {
+    const env = [...(S.data.envolventes[k] || [])].sort((a, b) => a.distance_m - b.distance_m);
+    return { key: k, env, ...radio(env, S.lim[k]) };
+  });
+}
+
+// ------------------------------------------------------------------ panel
+function renderPanel(zs) {
+  $("zones").innerHTML = zs.map(z => {
+    const m = ZMETA[z.key];
+    let val, st;
+    if (z.r === null) { val = `&gt; ${fmt(z.dcrit)}<small> m</small>`; st = "Supera el criterio a la distancia máxima calculada: amplía el barrido."; }
+    else if (z.estado === "menor_que_minimo") { val = `≤ ${fmt(z.r)}<small> m</small>`; st = "No se supera el criterio en ninguna distancia calculada."; }
+    else { val = `${fmt(z.r)}<small> m</small>`; st = `Juego de fracciones más desfavorable: ${z.set}`; }
+    return `<div class="zone"><div class="bar" style="background:${m.color()}"></div>
+      <div><div class="name">${m.name}</div><div class="crit">${m.long} · ${fmt(S.lim[z.key], 0)} mSv, ${m.periodo}</div></div>
+      <div class="r">${val}</div><div class="st">${st}</div></div>`;
+  }).join("");
+}
+
+function renderChart(zs) {
+  const W = 320, H = 200, ml = 54, mr = 10, mt = 10, mb = 30;
+  const all = zs.flatMap(z => z.env);
+  if (!all.length) { $("chart").innerHTML = ""; return; }
+  const xs = all.map(r => r.distance_m), ys = all.map(r => r.dosis_msv).filter(v => v > 0).concat(zs.map(z => S.lim[z.key]));
+  const x0 = Math.min(...xs), x1 = Math.max(...xs);
+  const l0 = Math.floor(Math.log10(Math.min(...ys))), l1 = Math.ceil(Math.log10(Math.max(...ys)));
+  const X = x => ml + (x - x0) / (x1 - x0 || 1) * (W - ml - mr);
+  const Y = v => mt + (l1 - Math.log10(Math.max(v, 10 ** l0))) / (l1 - l0 || 1) * (H - mt - mb);
+  let g = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Dosis frente a distancia">`;
+  for (let l = l0; l <= l1; l++) {
+    g += `<line x1="${ml}" x2="${W - mr}" y1="${Y(10 ** l)}" y2="${Y(10 ** l)}" stroke="${css("--line")}" stroke-width="1"/>`;
+    g += `<text x="${ml - 5}" y="${Y(10 ** l) + 3}" text-anchor="end">${l >= 0 ? fmt(10 ** l) : "1e" + l}</text>`;
+  }
+  const step = niceStep((x1 - x0) / 4);
+  for (let x = Math.ceil(x0 / step) * step; x <= x1; x += step)
+    g += `<text x="${X(x)}" y="${H - mb + 14}" text-anchor="middle">${fmt(x)}</text>`;
+  g += `<text x="${(ml + W - mr) / 2}" y="${H - 3}" text-anchor="middle">distancia (m)</text>`;
+  g += `<text x="10" y="${(mt + H - mb) / 2}" text-anchor="middle" transform="rotate(-90 10 ${(mt + H - mb) / 2})">TEDE (mSv)</text>`;
+  zs.forEach(z => {
+    const c = ZMETA[z.key].color();
+    g += `<line x1="${ml}" x2="${W - mr}" y1="${Y(S.lim[z.key])}" y2="${Y(S.lim[z.key])}" stroke="${c}" stroke-dasharray="4 3" stroke-width="1"/>`;
+    g += `<polyline fill="none" stroke="${c}" stroke-width="2" points="${z.env.map(r => `${X(r.distance_m)},${Y(r.dosis_msv)}`).join(" ")}"/>`;
+    if (z.r !== null && z.estado === "interpolado") {
+      g += `<line x1="${X(z.r)}" x2="${X(z.r)}" y1="${mt}" y2="${H - mb}" stroke="${c}" stroke-width="1"/>`;
+      g += `<circle cx="${X(z.r)}" cy="${Y(S.lim[z.key])}" r="3.5" fill="${c}"/>`;
+    }
+    const last = z.env[z.env.length - 1];
+    g += `<text x="${X(last.distance_m) - 2}" y="${Y(last.dosis_msv) - 5}" text-anchor="end" style="fill:${c}">${z.key}</text>`;
+  });
+  $("chart").innerHTML = g + "</svg>";
+}
+function niceStep(raw) { const p = 10 ** Math.floor(Math.log10(raw)); return [1, 2, 5, 10].map(m => m * p).find(s => s >= raw) || p * 10; }
+
+// ------------------------------------------------------------------- map
+let map = null, shipMarker = null, circles = {};
+const shipSvg = () => `<svg width="30" height="30" viewBox="-15 -15 30 30" style="transform:rotate(${S.rumbo}deg)"><path d="M0,-14 L6,-4 L6,12 L-6,12 L-6,-4 Z" fill="${css("--accent")}" stroke="#fff" stroke-width="1.5"/></svg>`;
+
+function initMap() {
+  if (typeof L === "undefined") { esquemaMode(); return; }
+  map = L.map("map", { zoomControl: true }).setView([S.lat, S.lon], 15);
+  let loaded = 0;
+  const tiles = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(map);
+  tiles.on("tileload", () => { loaded++; });
+  setTimeout(() => { if (!loaded) esquemaMode(); }, 4000);
+  map.on("click", e => { setShip(e.latlng.lat, e.latlng.lng); $("atraque").value = ""; });
+  L.control.scale({ imperial: false }).addTo(map);
+}
+
+function esquemaMode() {
+  S.mode = "esquema";
+  $("map").hidden = true; $("esquema").hidden = false; $("mapnote").hidden = false;
+  $("movehint").textContent = "Vista esquemática: cambia la posición con los campos de latitud y longitud.";
+  render();
+}
+
+function drawMap(zs) {
+  if (S.mode === "esquema" || !map) return drawEsquema(zs);
+  const ll = [S.lat, S.lon];
+  if (!shipMarker) {
+    shipMarker = L.marker(ll, { draggable: true, icon: L.divIcon({ className: "", html: shipSvg(), iconSize: [30, 30], iconAnchor: [15, 15] }) }).addTo(map);
+    shipMarker.on("dragend", e => { const p = e.target.getLatLng(); setShip(p.lat, p.lng); $("atraque").value = ""; });
+  } else {
+    shipMarker.setLatLng(ll);
+    shipMarker.setIcon(L.divIcon({ className: "", html: shipSvg(), iconSize: [30, 30], iconAnchor: [15, 15] }));
+  }
+  [...zs].sort((a, b) => (b.r || 0) - (a.r || 0)).forEach(z => {
+    const c = ZMETA[z.key].color();
+    if (circles[z.key]) { map.removeLayer(circles[z.key]); delete circles[z.key]; }
+    if (z.r === null) return;
+    circles[z.key] = L.circle(ll, { radius: z.r, color: c, weight: 2, fillColor: c, fillOpacity: 0.12 }).addTo(map)
+      .bindTooltip(`${z.key}: ${z.estado === "menor_que_minimo" ? "≤ " : ""}${fmt(z.r)} m`, { sticky: true });
+  });
+  shipMarker.setZIndexOffset(1000);
+}
+
+function drawEsquema(zs) {
+  const R = Math.max(50, ...zs.map(z => z.r || 0)) * 1.2, W = 800, k = (W / 2) / R;
+  let s = `<svg viewBox="${-W / 2} ${-W / 2} ${W} ${W}" preserveAspectRatio="xMidYMid meet">`;
+  s += `<rect x="${-W / 2}" y="${-W / 2}" width="${W}" height="${W}" fill="${css("--sea")}"/>`;
+  [...zs].sort((a, b) => (b.r || 0) - (a.r || 0)).forEach(z => {
+    if (z.r === null) return;
+    const c = ZMETA[z.key].color();
+    s += `<circle r="${z.r * k}" fill="${c}" fill-opacity=".12" stroke="${c}" stroke-width="2.5"/>`;
+    s += `<text x="${z.r * k * .71 + 8}" y="${-z.r * k * .71}" font-size="18" fill="${c}" font-family="IBM Plex Mono, monospace">${z.key} ${fmt(z.r)} m</text>`;
+  });
+  s += `<g transform="rotate(${S.rumbo})"><path d="M0,-14 L6,-4 L6,12 L-6,12 L-6,-4 Z" fill="${css("--accent")}"/></g>`;
+  const bar = niceStep(R / 3);
+  s += `<g transform="translate(${-W / 2 + 30},${W / 2 - 40})"><line x2="${bar * k}" stroke="${css("--ink")}" stroke-width="3"/><text y="-8" font-size="15" fill="${css("--ink")}" font-family="IBM Plex Mono, monospace">${fmt(bar)} m</text></g>`;
+  s += `<g transform="translate(${W / 2 - 40},${-W / 2 + 60})"><path d="M0,-26 L8,0 L0,-7 L-8,0 Z" fill="${css("--ink")}"/><text y="20" text-anchor="middle" font-size="15" fill="${css("--ink")}">N</text></g>`;
+  $("esquema").innerHTML = s + "</svg>";
+}
+
+// --------------------------------------------------------------- control
+function setShip(lat, lon) { S.lat = +lat; S.lon = +lon; syncInputs(); render(); if (map) map.panTo([S.lat, S.lon]); }
+function syncInputs() { $("lat").value = S.lat.toFixed(4); $("lon").value = S.lon.toFixed(4); $("rumbo").value = S.rumbo; $("limEAB").value = S.lim.EAB; $("limLPZ").value = S.lim.LPZ; }
+function render() { if (!S.data) return; const zs = zonas(); renderPanel(zs); renderChart(zs); drawMap(zs); }
+let fitted = false;
+function load(data, label, demo) {
+  S.data = data;
+  if (typeof data.lat === "number") { S.lat = data.lat; S.lon = data.lon; }
+  if (typeof data.rumbo === "number") S.rumbo = data.rumbo;
+  $("demo").hidden = !demo;
+  $("src").textContent = label + (data.n_sets ? ` · ${data.n_sets} juegos de fracciones` : "");
+  syncInputs(); render();
+  if (map) { const c = Object.values(circles); if (c.length) map.fitBounds(L.featureGroup(c).getBounds().pad(0.3)); }
+}
+
+["lat", "lon"].forEach(id => $(id).addEventListener("change", () => setShip($("lat").value, $("lon").value)));
+$("rumbo").addEventListener("input", () => { S.rumbo = ((+$("rumbo").value % 360) + 360) % 360; render(); });
+$("limEAB").addEventListener("input", () => { const v = +$("limEAB").value; if (v > 0) { S.lim.EAB = v; render(); } });
+$("limLPZ").addEventListener("input", () => { const v = +$("limLPZ").value; if (v > 0) { S.lim.LPZ = v; render(); } });
+$("atraque").addEventListener("change", () => { const v = $("atraque").value; if (v) { const [a, b] = v.split(",").map(Number); setShip(a, b); } });
+$("file").addEventListener("change", () => {
+  const f = $("file").files[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try { const d = JSON.parse(rd.result); if (!d.envolventes) throw new Error(); load(d, f.name, false); }
+    catch { $("src").textContent = "El fichero no es un zonas_emergencia.json válido (falta «envolventes»)."; }
+  };
+  rd.readAsText(f);
+});
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
+
+initMap();
+if (EMBEDDED) load(EMBEDDED, EMBEDDED._fuente || "Resultados incrustados", !!EMBEDDED._ejemplo);
+else { $("src").textContent = "Carga un zonas_emergencia.json generado por PIPELINE.py."; syncInputs(); }
+</script>

@@ -1,0 +1,240 @@
+{
+  "criterios": {
+    "Decommissioning & Waste": 0.062242345269647656,
+    "Fuel Cycle Characteristics": 0.09815081409328888,
+    "Licensing Status": 0.1010807214079276,
+    "Maritime Operational Challenges": 0.311540262750948,
+    "Political Considerations": 0.16610633230649383,
+    "Reactor Core Characteristics": 0.21591818577184177,
+    "Reactor System Characteristics": 0.044961338399852495
+  },
+  "consistencia": {
+    "Selection of SMR for maritime propulsion": 0.06707860492644102,
+    "Decommissioning & Waste": 0.0,
+    "Fuel Cycle Characteristics": 0.0,
+    "Licensing Status": 0.0,
+    "Maritime Operational Challenges": 0.0,
+    "Political Considerations": 0.0,
+    "Reactor Core Characteristics": 0.046225496447391365,
+    "Reactor System Characteristics": 0.08897945988404296,
+    "escala Discharge Burnup": -7.656710514656253e-16,
+    "escala Waste Streams": 0.1258614204975126,
+    "escala Enrichment": 0.04385852752346844,
+    "escala Refueling Time": 0.016970105370907988,
+    "escala Licensing Initiated": 0.06587478878070079,
+    "escala Operational Experience": 0.09297183953014802,
+    "escala Limiting Operational Factors": 0.10094807735712027,
+    "escala Need for Specific Equipment": 0.09297183953015146,
+    "escala Historical Mishappenings": 0.0,
+    "escala Safety Perception": 0.0,
+    "escala Coolant Toxicity": 0.08104750691856306,
+    "escala Fuel Safety": 0.1258614204975099,
+    "escala Source Term": 0.1258614204975126,
+    "escala Component Qualification": 0.09297183953015299,
+    "escala Coolant Temperature": -7.656710514656253e-16,
+    "escala Dimensions": 0.007933373029550743,
+    "escala Power Scalability": 0.18738066975485906,
+    "escala Type": 0.09297183953015146,
+    "escala Weight": 0.007105632254274786
+  },
+  "subcriterios": {
+    "Discharge Burnup": {
+      "criterio": "Decommissioning & Waste",
+      "local": 0.6666666666666667,
+      "global": 0.041494896846431775
+    },
+    "Waste Streams": {
+      "criterio": "Decommissioning & Waste",
+      "local": 0.3333333333333333,
+      "global": 0.020747448423215884
+    },
+    "Enrichment": {
+      "criterio": "Fuel Cycle Characteristics",
+      "local": 0.25,
+      "global": 0.02453770352332222
+    },
+    "Refueling Time": {
+      "criterio": "Fuel Cycle Characteristics",
+      "local": 0.75,
+      "global": 0.07361311056996667
+    },
+    "Licensing Initiated": {
+      "criterio": "Licensing Status",
+      "local": 0.25,
+      "global": 0.0252701803519819
+    },
+    "Operational Experience": {
+      "criterio": "Licensing Status",
+      "local": 0.75,
+      "global": 0.0758105410559457
+    },
+    "Limiting Operational Factors": {
+      "criterio": "Maritime Operational Challenges",
+      "local": 0.75,
+      "global": 0.23365519706321097
+    },
+    "Need for Specific Equipment": {
+      "criterio": "Maritime Operational Challenges",
+      "local": 0.25,
+      "global": 0.077885065687737
+    },
+    "Historical Mishappenings": {
+      "criterio": "Political Considerations",
+      "local": 0.25,
+      "global": 0.041526583076623456
+    },
+    "Safety Perception": {
+      "criterio": "Political Considerations",
+      "local": 0.75,
+      "global": 0.12457974922987036
+    },
+    "Coolant Toxicity": {
+      "criterio": "Reactor Core Characteristics",
+      "local": 0.33251592768713867,
+      "global": 0.07179623584644791
+    },
+    "Fuel Safety": {
+      "criterio": "Reactor Core Characteristics",
+      "local": 0.5278361334067454,
+      "global": 0.11396942031000831
+    },
+    "Source Term": {
+      "criterio": "Reactor Core Characteristics",
+      "local": 0.13964793890611585,
+      "global": 0.03015252961538553
+    },
+    "Component Qualification": {
+      "criterio": "Reactor System Characteristics",
+      "local": 0.11754478223203106,
+      "global": 0.005284970731071317
+    },
+    "Coolant Temperature": {
+      "criterio": "Reactor System Characteristics",
+      "local": 0.08068423361134489,
+      "global": 0.00362767113093243
+    },
+    "Dimensions": {
+      "criterio": "Reactor System Characteristics",
+      "local": 0.043740006383896975,
+      "global": 0.0019666092286381004
+    },
+    "Power Scalability": {
+      "criterio": "Reactor System Characteristics",
+      "local": 0.4102102374220587,
+      "global": 0.018443601299817015
+    },
+    "Type": {
+      "criterio": "Reactor System Characteristics",
+      "local": 0.23668342033738862,
+      "global": 0.01064160335542386
+    },
+    "Weight": {
+      "criterio": "Reactor System Characteristics",
+      "local": 0.1111373200132798,
+      "global": 0.004996882653969773
+    }
+  },
+  "intensidades": {
+    "Discharge Burnup": {
+      "High (> 60 MWd/kg)": 1.0,
+      "Medium (40-60 MWd/kg)": 0.4999999999999997,
+      "Low (< 40 MWd)": 0.24999999999999992
+    },
+    "Waste Streams": {
+      "High": 0.08549879733383493,
+      "Medium": 0.29240177382128674,
+      "Low": 1.0
+    },
+    "Enrichment": {
+      "High (10-20 %)": 0.10213421469507976,
+      "Medium (5-10 %)": 0.23112197575846724,
+      "Low (0.7-5 %)": 0.49299687280464644,
+      "Natural (0.7 %)": 1.0
+    },
+    "Refueling Time": {
+      "No Refueling": 1.0,
+      ">= 30 y": 0.6553489259521197,
+      "< 30 y": 0.2390470358549336,
+      "Online Refueling": 0.08654814324194234
+    },
+    "Licensing Initiated": {
+      "Approved": 1.0,
+      "Started": 0.10844960613841662,
+      "Work in Progress": 0.3293168780041748
+    },
+    "Operational Experience": {
+      "High": 1.0,
+      "Medium": 0.3466806371753172,
+      "Low": 0.08012497612818935
+    },
+    "Limiting Operational Factors": {
+      "Few Limitations": 1.0,
+      "Limited": 0.28114422176724957,
+      "Very Limited": 0.07904207343311248
+    },
+    "Need for Specific Equipment": {
+      "High": 0.08012497612818936,
+      "Medium": 0.23112042478354497,
+      "Low": 1.0
+    },
+    "Historical Mishappenings": {
+      "Limited Past Reactor Issues": 0.2,
+      "No Past Issues": 1.0
+    },
+    "Safety Perception": {
+      "High": 1.0,
+      "Low": 0.14285714285714282
+    },
+    "Coolant Toxicity": {
+      "High": 0.09210078746600964,
+      "Medium": 0.2714417616594905,
+      "Low": 1.0
+    },
+    "Fuel Safety": {
+      "High": 1.0,
+      "Medium": 0.29240177382128646,
+      "Low": 0.08549879733383482
+    },
+    "Source Term": {
+      "High": 0.08549879733383493,
+      "Medium": 0.29240177382128674,
+      "Low": 1.0
+    },
+    "Component Qualification": {
+      "High": 0.12018746419228418,
+      "Medium": 0.3466806371753173,
+      "Low": 1.0
+    },
+    "Coolant Temperature": {
+      "High (> 850 K)": 0.5000000000000002,
+      "Medium (700-800 K)": 1.0,
+      "Low (<700 K)": 0.5000000000000001
+    },
+    "Dimensions": {
+      "Small (< 100 m3)": 1.0,
+      "Medium (100-300 m3)": 0.5503212081491041,
+      "Large (> 300 m3)": 0.3028534321386899
+    },
+    "Power Scalability": {
+      "Addition of Units": 1.0,
+      "Enrichment Increase": 0.26456684199470026,
+      "Reactor Resizing": 0.06999561388304851
+    },
+    "Type": {
+      "Loop with Forced Convection": 0.08012497612818936,
+      "Loop with Natural Convection": 0.23112042478354497,
+      "Integral": 1.0
+    },
+    "Weight": {
+      "Very Heavy (> 1000 t)": 0.12291522460215264,
+      "Heavy (500-100 t)": 0.2091169399698069,
+      "Medium (250-500 t)": 0.37106464500748065,
+      "Light (< 250 t)": 1.0
+    }
+  },
+  "puntuaciones": {
+    "SEALER-55": 0.4383887113735157,
+    "MMR": 0.6667260012996717,
+    "KP-FHR": 0.37263184697512164
+  }
+}
