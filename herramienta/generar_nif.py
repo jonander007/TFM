@@ -24,8 +24,11 @@ For each radioactive nuclide it writes the 12-token line read by PIPELINE.genera
     attenuation and transported as a gas (group 1), as in KP-TR-012 §6.4.2. Use
     --sin-tritio to leave it out.
 
+Nuclides with no dose factors in RADTRAD's .inp (Defaults/fgr11&12.inp, completed with H-3
+by completar_inp.py) are left out and listed, with the activity they carry.
+
 Usage:
-  python generar_nif.py [workbook] [--potencia 320] [--salida Variables_NIF_terminofuente.txt]
+  python generar_nif.py [workbook] [--potencia 320] [--salida Variables_NIF_terminofuente.txt] [--inp file]
 """
 
 from __future__ import annotations
@@ -89,7 +92,9 @@ def decay_modes() -> dict:
     return out
 
 
-def build(book: Path, power: float, tritium: bool = True):
+def build(book: Path, power: float, tritium: bool = True, inp: Path | None = None):
+    """Inventory lines for the .nif. If `inp` is given, nuclides without dose factors in
+    that file are left out (RADTRAD cannot compute their dose) and reported."""
     ws = load_workbook(book, data_only=True)[SHEET]
     modes = decay_modes()
     rows = []
@@ -106,6 +111,12 @@ def build(book: Path, power: float, tritium: bool = True):
         rows.append(((zz, state), act))
     if tritium:
         rows.append(((1003, 0), TRITIUM_CI * BQ_PER_CI))
+    dropped = []
+    if inp is not None:
+        from PIPELINE import inp_nuclides
+        known = inp_nuclides(inp)
+        dropped = [(name_of(*key), act / BQ_PER_CI) for key, act in rows if name_of(*key) not in known]
+        rows = [(key, act) for key, act in rows if name_of(*key) in known]
     present = {key for key, _ in rows}
     lines, total_ci = [], 0.0
     for k, ((zz, state), act) in enumerate(sorted(rows, key=lambda x: (x[0][0] // 1000, x[0][0] % 1000, x[0][1])), 1):
@@ -119,7 +130,7 @@ def build(book: Path, power: float, tritium: bool = True):
         for d, f in daughters:
             tok += [d, f"{f:.5E}"]
         lines.append(" ".join(tok))
-    return lines, total_ci
+    return lines, total_ci, dropped
 
 
 def main():
@@ -128,13 +139,22 @@ def main():
     ap.add_argument("--potencia", type=float, default=320.0, help="plant power level of the .psf [MWth]")
     ap.add_argument("--salida", type=Path, default=HERE / "Variables_NIF_terminofuente.txt")
     ap.add_argument("--sin-tritio", action="store_true", help="leave tritium (H-3) out of the inventory")
+    ap.add_argument("--inp", type=Path, default=HERE / "Defaults" / "fgr11&12.inp",
+                    help="RADTRAD dose factor file; nuclides missing from it are left out ('' to keep all)")
     a = ap.parse_args()
-    lines, total = build(a.libro, a.potencia, tritium=not a.sin_tritio)
+    sys.path.insert(0, str(HERE))
+    inp = a.inp if str(a.inp) and a.inp.exists() else None
+    lines, total, dropped = build(a.libro, a.potencia, tritium=not a.sin_tritio, inp=inp)
+    if dropped:
+        lost = sum(c for _, c in dropped)
+        print(f"Left out (no dose factors in {inp.name}): {len(dropped)} nuclides, {lost:.3E} Ci "
+              f"({lost / (lost + total):.2E} of the activity outside the building)")
+        for n, c in sorted(dropped, key=lambda x: -x[1]):
+            print(f"   {n:8s} {c:.3E} Ci")
     a.salida.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(f"{a.salida}: {len(lines)} nuclides, {total:.4E} Ci outside the building "
           f"({total / a.potencia:.4E} Ci/MWth at {a.potencia:g} MWth)")
     # also write the .nif itself, with the generator used by PIPELINE.py
-    sys.path.insert(0, str(HERE))
     from PIPELINE import generate_nif
     nif = a.salida.with_name("kpfhr_terminofuente.nif")
     generate_nif(a.salida, nif, title="KP-FHR attenuated source term (Ci/MWth)")

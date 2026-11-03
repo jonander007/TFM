@@ -19,9 +19,9 @@ El trabajo define las zonas de emergencia (EAB y LPZ) alrededor de un metanero c
 
 ## Ejecutar la herramienta
 
-Requiere Windows con ARCON96 y RADTRAD instalados, Python 3.10 o posterior y `pip install pandas numpy openpyxl matplotlib` (matplotlib es opcional; solo se usa para la imagen PNG del mapa). El fichero `fgr11&12.inp` debe tener factores de dosis para el H-3 (tritio), que ahora forma parte del inventario.
+Requiere Windows con ARCON96 y RADTRAD instalados, Python 3.10 o posterior y `pip install pandas numpy openpyxl matplotlib` (matplotlib es opcional; solo se usa para la imagen PNG del mapa). `herramienta/Defaults/` ya incluye `fgr11&12.inp` completado con el H-3 (`completar_inp.py`; el original está en `fgr11&12_original.inp`).
 
-1. En `herramienta/`, añade los ficheros meteorológicos `MET01.MET`, `MET02.MET`, … y copia a `herramienta/Defaults/` el fichero de factores de dosis `fgr11&12.inp` de RADTRAD. La carpeta ya trae el inventario (`kpfhr_terminofuente.nif`) y el fichero de liberación (`kpfhr_directo.rft`); la plantilla por defecto es `template_kpfhr.psf`.
+1. En `herramienta/`, añade los ficheros meteorológicos `MET01.MET`, `MET02.MET`, … . La carpeta `herramienta/Defaults/` ya trae el inventario (`kpfhr_terminofuente.nif`), el fichero de liberación (`kpfhr_directo.rft`) y los factores de dosis (`fgr11&12.inp`, con el H-3 añadido); la plantilla por defecto es `template_kpfhr.psf`.
 2. Si los ejecutables no están en `C:\ARCON96\arcon96f.exe` y `C:\RADTRAD\RADTRAD3.03x\Distribution0203\BatchModeVersion\radtrad.exe`, cambia esas rutas al principio de `PIPELINE.py`.
 3. Ejecuta `python PIPELINE.py` desde `herramienta/`. Todas las preguntas se hacen al inicio y después el cálculo es desatendido.
 4. Abre `psf_batch/postprocess/mapa_zonas.html` para ver el buque con las zonas sobre el mapa.

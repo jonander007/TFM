@@ -943,6 +943,15 @@ def _patch_power(lines, power=PLANT_POWER_MWTH):
 _patch_power.warned = False
 
 
+def inp_nuclides(inp_path: Path):
+    """Nuclides with their own dose factor block in a RADTRAD .inp file (the
+    'NUCLIDES DEFINED' list; daughters named in 'Including:' are not counted)."""
+    lines = inp_path.read_text(encoding="cp1252", errors="replace").splitlines()
+    i = next(k for k, l in enumerate(lines) if "NUCLIDES DEFINED" in l)
+    n = int(lines[i].split()[0])
+    return {l.split()[0] for l in lines[i + 1:i + 1 + n] if l.strip()}
+
+
 def check_dcf(nif_path: Path, inp_path: Path):
     """Warn about .nif nuclides with no dose conversion factors in the .inp file."""
     if not (nif_path.exists() and inp_path.exists()):
@@ -951,7 +960,7 @@ def check_dcf(nif_path: Path, inp_path: Path):
     name_re = re.compile(r"\b([A-Z][a-z]?-\d{1,3}m?)\b")
     in_nif = [l.strip() for l in nif_path.read_text(encoding="utf-8", errors="replace").splitlines()
               if name_re.fullmatch(l.strip() or "-")]
-    known = set(name_re.findall(inp_path.read_text(encoding="cp1252", errors="replace")))
+    known = inp_nuclides(inp_path)
     missing = [n for n in in_nif if n not in known]
     if missing:
         logging.warning("No dose factors in %s for: %s", inp_path.name, ", ".join(missing))
