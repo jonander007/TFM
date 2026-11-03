@@ -36,9 +36,9 @@ CÓMO EJECUTAR
   4. Al terminar, haz doble clic en VER_MAPA.bat: abre psf_batch\postprocess\mapa_zonas.html
      servido en http://localhost, con el fondo de OpenStreetMap. Si abres el HTML directamente
      (doble clic sobre el fichero), OpenStreetMap no sirve las teselas a ficheros locales y el
-     visor usa CARTO (también datos de OpenStreetMap). Cierra la ventana negra para terminar.
+     visor usa el callejero de Esri. Cierra la ventana negra para terminar.
      Los radios están en psf_batch\postprocess\zonas_emergencia.json y la imagen en mapa_zonas.png.
-     En el selector de capas puedes cambiar a CARTO o a satélite (Esri). Para
+     En el selector de capas puedes cambiar a callejero o satélite de Esri. Para
      regenerar solo el mapa sin repetir el cálculo:  python zonas_emergencia.py psf_batch\postprocess
 
 QUÉ ENVIARME PARA LA MEMORIA

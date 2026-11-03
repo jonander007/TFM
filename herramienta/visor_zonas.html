@@ -806,21 +806,23 @@ function initMap() {
   map = L.map("map", { zoomControl: true }).setView([S.lat, S.lon], 15);
   let loaded = 0;
   // Base map: OpenStreetMap (free; attribution required). tile.openstreetmap.org only serves
-  // pages that send a Referer, i.e. pages opened from a web server; ver_mapa.py serves this
-  // file on http://localhost for that. Opened as a local file (file://) it would get 403
-  // "Access blocked", so CARTO is used instead (OSM data too, no Referer needed).
+  // pages that send a Referer, i.e. pages opened from a web server: ver_mapa.py serves the map
+  // on http://localhost for that. Opened as a local file (file://) OSM answers 403 "Access
+  // blocked" and CARTO asks for an API key, so the default there is Esri's street map, which
+  // serves tiles without a Referer or a key.
   const OSM_DATA = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
   const servido = location.protocol.startsWith("http");
+  const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services/";
   const bases = {
     "OpenStreetMap": L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",
       { maxZoom: 19, attribution: OSM_DATA }),
-    "CARTO (OSM)": L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-      { maxZoom: 20, subdomains: "abcd", attribution: OSM_DATA + ' · © <a href="https://carto.com/attributions">CARTO</a>' }),
-    "Satélite (Esri)": L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    "Callejero (Esri)": L.tileLayer(ESRI + "World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+      { maxZoom: 19, attribution: "© Esri, HERE, Garmin, " + OSM_DATA }),
+    "Satélite (Esri)": L.tileLayer(ESRI + "World_Imagery/MapServer/tile/{z}/{y}/{x}",
       { maxZoom: 19, attribution: "© Esri, Maxar, Earthstar Geographics" }),
   };
   Object.values(bases).forEach(t => t.on("tileload", () => { loaded++; }));
-  bases[servido ? "OpenStreetMap" : "CARTO (OSM)"].addTo(map);
+  bases[servido ? "OpenStreetMap" : "Callejero (Esri)"].addTo(map);
   L.control.layers(bases, null, { collapsed: false, position: "topright" }).addTo(map);
   setTimeout(() => { if (!loaded) esquemaMode(); }, 4000);
   map.on("click", e => { setShip(e.latlng.lat, e.latlng.lng); $("atraque").value = ""; });
