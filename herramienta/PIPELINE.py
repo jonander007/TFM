@@ -617,7 +617,7 @@ def _load_p95_by_v(path, hora):
 # ===========================================================================
 # ARCON96 cumulative frequencies are given for 11 averaging periods (KP-TR-012 §7.9.2),
 # one more (48 h) than HORAS_VALIDAS. The old fixed map read 24 h as 12 h and 48 h as 24 h.
-CFD_HOURS = (1, 2, 4, 8, 12, 24, 48, 96, 168, 360, 720)
+CFD_HOURS = (1, 2, 4, 8, 12, 24, 96, 168, 360, 720)   # periods requested in the .rsf
 _layout_logged = set()
 
 
@@ -641,24 +641,39 @@ def _period_layout(n_values, header=None):
 
 
 def _parse_cfd(cfd_path):
-    """Numeric rows of an ISMR.cfd as (xoq, {hour: count}) for HORAS_VALIDAS."""
+    """Numeric rows of an ISMR.cfd as (xoq, {hour: count}) for HORAS_VALIDAS.
+
+    ARCON96 writes the table in blocks side by side, each with its own XOQ column:
+        XOQ   1   2   4   8      XOQ  12  24  96  168  360  720
+    so the header is read token by token and every data token is mapped to the
+    column with the same position (the XOQ columns repeat the first value)."""
     try: raw = cfd_path.read_text(encoding="cp1252", errors="replace").splitlines()
     except Exception as e: logging.warning("Cannot read %s: %s", cfd_path, e); return []
-    header, rows = None, []
+    cols, rows = None, []
     for ln in raw:
-        if any(s in ln for s in ("X/Q CUMULATIVE FREQUENCY","XOQ","Abv. Lim.","Belw. Lim.")):
-            ints = [int(t) for t in re.findall(r"\b\d+\b", ln)]
-            if len(ints) >= len(HORAS_VALIDAS) and 720 in ints:   # column header with the periods
-                header = ints[ints.index(1):] if 1 in ints else ints
+        toks = ln.split()
+        if not toks:
             continue
-        tokens = NUM_RE.findall(ln)
-        if len(tokens) >= len(HORAS_VALIDAS) + 1:
-            rows.append([float(t) for t in tokens])
-    if not rows:
-        return []
-    layout = _period_layout(len(rows[0]) - 1, header)
-    col = {h: 1 + layout.index(h) for h in HORAS_VALIDAS}
-    return [(r[0], {h: r[col[h]] for h in HORAS_VALIDAS}) for r in rows if len(r) > max(col.values())]
+        if toks[0].upper() == "XOQ":                       # header: XOQ h h h … XOQ h h …
+            cols = [None if t.upper() == "XOQ" else int(float(t)) for t in toks]
+            continue
+        if cols is None or any(t.endswith("Lim.") for t in toks) or "FREQUENCY" in ln.upper():
+            continue
+        vals = NUM_RE.findall(ln)
+        if len(vals) != len(cols):
+            continue
+        vals = [float(v) for v in vals]
+        counts = {h: v for h, v in zip(cols, vals) if h is not None}
+        if all(h in counts for h in HORAS_VALIDAS):
+            rows.append((vals[0], counts))
+    if cols is None:
+        logging.warning("No XOQ header in %s", cfd_path)
+    else:
+        layout = tuple(h for h in cols if h is not None)
+        if layout not in _layout_logged:
+            _layout_logged.add(layout)
+            logging.info("ARCON96 period layout: %s h", ", ".join(map(str, layout)))
+    return [(x, {h: c[h] for h in HORAS_VALIDAS}) for x, c in rows]
 
 
 def _interp_xoq(pairs, target):
