@@ -33,6 +33,8 @@ CÓMO EJECUTAR
      (hasta 1.200 m, límite de validez de ARCON96 según KP-TR-012).
   4. Al terminar, abre psf_batch\postprocess\mapa_zonas.html (mapa con el buque y las zonas).
      Los radios están en psf_batch\postprocess\zonas_emergencia.json y la imagen en mapa_zonas.png.
+     El mapa base es CARTO (o satélite/callejero de Esri, en el selector de capas). Para
+     regenerar solo el mapa sin repetir el cálculo:  python zonas_emergencia.py psf_batch\postprocess
 
 QUÉ ENVIARME PARA LA MEMORIA
   Comprime y envía:  ARCON\  (sobre todo los .xlsx y .txt de χ/Q)  y  psf_batch\postprocess\

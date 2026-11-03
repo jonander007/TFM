@@ -651,6 +651,8 @@ button:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
   .panel { border-right: 0; padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+.leaflet-control-layers label { display: flex; align-items: center; gap: 6px; margin: 2px 0; }
+.leaflet-control-layers-selector { display: inline-block; width: auto; margin: 0; }
 </style>
 
 <div class="app">
@@ -803,8 +805,21 @@ function initMap() {
   if (typeof L === "undefined") { esquemaMode(); return; }
   map = L.map("map", { zoomControl: true }).setView([S.lat, S.lon], 15);
   let loaded = 0;
-  const tiles = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(map);
-  tiles.on("tileload", () => { loaded++; });
+  // The page is usually opened as a local file (file://), which sends no Referer header;
+  // tile.openstreetmap.org rejects those requests (403 "Access blocked"), so the default
+  // base maps are CARTO and Esri, which serve tiles without a Referer.
+  const OSM_DATA = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+  const bases = {
+    "Mapa (CARTO)": L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+      { maxZoom: 20, subdomains: "abcd", attribution: OSM_DATA + ' · © <a href="https://carto.com/attributions">CARTO</a>' }),
+    "Satélite (Esri)": L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      { maxZoom: 19, attribution: "© Esri, Maxar, Earthstar Geographics" }),
+    "Callejero (Esri)": L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+      { maxZoom: 19, attribution: "© Esri, HERE, Garmin, " + OSM_DATA }),
+  };
+  Object.values(bases).forEach(t => t.on("tileload", () => { loaded++; }));
+  bases["Mapa (CARTO)"].addTo(map);
+  L.control.layers(bases, null, { collapsed: false, position: "topright" }).addTo(map);
   setTimeout(() => { if (!loaded) esquemaMode(); }, 4000);
   map.on("click", e => { setShip(e.latlng.lat, e.latlng.lng); $("atraque").value = ""; });
   L.control.scale({ imperial: false }).addTo(map);

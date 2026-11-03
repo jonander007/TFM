@@ -15,7 +15,7 @@ interpolation between the last distance that exceeds it and the next one.
 Outputs, next to the inputs:
   zonas_emergencia.json   radii, criteria and dose–distance envelopes
   mapa_zonas.html         interactive viewer (visor_zonas.html with the results embedded):
-                          ship on an OpenStreetMap background with the EAB and LPZ circles,
+                          ship on a CARTO or Esri base map with the EAB and LPZ circles,
                           editable position, heading and dose criteria, dose–distance chart;
                           schematic view in metres when there is no internet access
   mapa_zonas.png          static schematic for reports (requires matplotlib)
