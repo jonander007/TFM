@@ -41,15 +41,11 @@ QUÉ ENVIARME PARA LA MEMORIA
   y el registro de la ejecución, pipeline.log, que se crea en esta carpeta.
 
 SI ARCON96 TERMINA CON ERROR (rc=1)
-  * Los MET tienen los campos en las columnas que lee ARCON96, comprobadas hora a hora con su
-    salida QA: dirección y velocidad a 10 m en 17-19 y 20-22, estabilidad en 24-25, dirección y
-    velocidad a 58 m en 29-31 y 32-34. Ejemplo: MET01 0100100   225020 07   267066
-  * Si aun así falla, copia los cinco ficheros de MET_alternativa\ sobre los de esta carpeta
-    (misma información con un espacio al principio de cada línea, por si ARCON96 lee también la
-    fecha una columna más a la derecha) y repite la prueba corta (distancias 10 a 20, paso 10).
-  * El pipeline conserva las carpetas de los casos fallidos y copia el mensaje de ARCON96 en
-    pipeline.log. Envíame pipeline.log, la carpeta del primer caso fallido y, si puedes, el
-    fichero de ejemplo que trae ARCON96 (EXAMPLE.MET o similar, en C:\ARCON96).
+  * Los MET tienen el formato de RADTRAD_ENGINE.py (_met_build_line), que reproduce hora a hora
+    lo que ARCON96 lee según su salida QA:  ' MET01 0100100  2250020 07  2670066'
+    (espacio inicial; dirección 3 cifras + velocidad 4 cifras en décimas de m/s).
+  * Si aun así falla, el pipeline conserva las carpetas de los casos fallidos y copia el mensaje
+    de ARCON96 en pipeline.log. Envíame pipeline.log y la carpeta del primer caso fallido.
 
 ANTES DE EJECUTAR, COMPRUEBA
   * Borra las carpetas ARCON\ y psf_batch\ de ejecuciones anteriores.
