@@ -15,7 +15,10 @@ For each radioactive nuclide it writes the 12-token line read by PIPELINE.genera
     barium, ruthenium, cerium, lanthanum), as in the template inventory files;
   * inventory = activity outside the building (Ci) / plant power (MWth), because RADTRAD
     multiplies the .nif by the plant power level of the .psf (PIPELINE sets it to 320 MWth);
-  * daughters from the NUBASE2020 decay modes, kept only if they are in the inventory;
+  * daughters from the NUBASE2020 decay modes (isomeric transitions included), kept only
+    if they are in the inventory;
+  * the iodines and short-lived noble gases added by datos/rendimientos_fision/
+    normalizar_inventario.py (isomeric state in column BK) are read like any other row;
   * tritium (H-3) added from KP-TR-012 Table B-1 (6,368 Ci in the primary system after
     4.75 years: pebbles, reflector, vessel, piping, IHX and salt), released without
     attenuation and transported as a gas (group 1), as in KP-TR-012 §6.4.2. Use
@@ -40,6 +43,7 @@ from nubase import NUBASE_FILE, half_life  # noqa: E402
 DEFAULT_BOOK = ROOT / "datos" / "inventario" / "Calculosfueradelacontencion_NUBASE2020.xlsx"
 SHEET = "AZ6 RZ1 (ACCIDENT)"
 COL_NAME, COL_ZZ, COL_BUILDING = 2, 3, 56        # B, C, BD (95 % chain, after the building)
+COL_STATE = 63                                     # BK: isomeric state of the rows added by normalizar_inventario.py
 BQ_PER_CI = 3.7e10
 TRITIUM_CI = 9 + 4743 + 1181 + 320 + 60 + 55     # KP-TR-012 Table B-1: salt, pebbles, reflector, vessel, piping, IHX
 
@@ -55,30 +59,33 @@ GROUP = {**{e: 1 for e in ("Xe", "Kr", "H")}, **{e: 2 for e in ("I", "Br")}, **{
          **{e: 9 for e in ("La", "Y", "Zr", "Nb", "Pr", "Nd", "Pm", "Sm", "Eu", "Gd", "Am", "Cm")}}
 
 
-def name_of(zzaaa: int) -> str:
-    return f"{SYM[zzaaa // 1000]}-{zzaaa % 1000}"
+def name_of(zzaaa: int, state: int = 0) -> str:
+    return f"{SYM[zzaaa // 1000]}-{zzaaa % 1000}" + ("m" if state else "")
 
 
 def decay_modes() -> dict:
-    """{zzaaa: [(daughter_zzaaa, fraction), …]} for ground states, from the NUBASE2020 BR field."""
+    """{(zzaaa, state): [((daughter_zzaaa, 0), fraction), …]} from the NUBASE2020 BR field.
+
+    Isomeric transitions (IT) go to the ground state of the same nuclide. Beta decays are
+    assigned to the ground state of the daughter (NUBASE gives no feeding of isomers)."""
     out = {}
     for ln in NUBASE_FILE.read_text(encoding="latin-1").splitlines():
-        if ln.startswith("#") or len(ln) < 120 or ln[7] != "0":
+        if ln.startswith("#") or len(ln) < 120 or ln[7] not in "012":
             continue
-        a, z = int(ln[0:3]), int(ln[4:7])
+        a, z, state = int(ln[0:3]), int(ln[4:7]), int(ln[7])
         modes = []
         for item in ln[119:].split(";"):
-            m = re.match(r"\s*(B-|B\+|EC|e\+|A)\s*[=~<>]+\s*([\d.]+)", item)
+            m = re.match(r"\s*(B-|B\+|EC|e\+|A|IT)\s*[=~<>]+\s*([\d.]+)", item)
             if not m:
                 continue
             kind, pct = m.group(1), float(m.group(2))
-            dz, da = {"B-": (1, 0), "B+": (-1, 0), "EC": (-1, 0), "e+": (-1, 0), "A": (-2, -4)}[kind]
-            modes.append(((z + dz) * 1000 + a + da, pct / 100.0))
+            dz, da = {"B-": (1, 0), "B+": (-1, 0), "EC": (-1, 0), "e+": (-1, 0), "A": (-2, -4), "IT": (0, 0)}[kind]
+            modes.append((((z + dz) * 1000 + a + da, 0), pct / 100.0))
         # EC and B+ are often given both as "EC+B+" totals; merge equal daughters
         merged = {}
         for d, f in modes:
             merged[d] = max(merged.get(d, 0.0), f)
-        out[z * 1000 + a] = sorted(merged.items(), key=lambda x: -x[1])
+        out[(z * 1000 + a, state)] = sorted(merged.items(), key=lambda x: -x[1])
     return out
 
 
@@ -92,20 +99,21 @@ def build(book: Path, power: float, tritium: bool = True):
         if not isinstance(zz, (int, float)) or not isinstance(act, (int, float)) or act <= 0:
             continue
         zz = int(zz)
-        T, _ = half_life(zz)
+        state = int(ws.cell(r, COL_STATE).value or 0)
+        T, _ = half_life(zz, state)
         if T is None:
             continue
-        rows.append((zz, act))
+        rows.append(((zz, state), act))
     if tritium:
-        rows.append((1003, TRITIUM_CI * BQ_PER_CI))
-    present = {zz for zz, _ in rows}
+        rows.append(((1003, 0), TRITIUM_CI * BQ_PER_CI))
+    present = {key for key, _ in rows}
     lines, total_ci = [], 0.0
-    for k, (zz, act) in enumerate(sorted(rows, key=lambda x: (x[0] // 1000, x[0] % 1000)), 1):
-        name = name_of(zz)
-        T, _ = half_life(zz)
+    for k, ((zz, state), act) in enumerate(sorted(rows, key=lambda x: (x[0][0] // 1000, x[0][0] % 1000, x[0][1])), 1):
+        name = name_of(zz, state)
+        T, _ = half_life(zz, state)
         ci = act / BQ_PER_CI
         total_ci += ci
-        daughters = [(name_of(d), f) for d, f in modes.get(zz, []) if d in present][:3]
+        daughters = [(name_of(*d), f) for d, f in modes.get((zz, state), []) if d in present][:3]
         daughters += [("none", 0.0)] * (3 - len(daughters))
         tok = [f"{k:03d}", name, str(GROUP[name.split('-')[0]]), f"{T:.6E}", str(zz % 1000), f"{ci / power:.6E}"]
         for d, f in daughters:

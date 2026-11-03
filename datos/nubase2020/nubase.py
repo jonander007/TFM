@@ -7,7 +7,8 @@ F.G. Kondev, M. Wang, W.J. Huang, S. Naimi, G. Audi,
 "The NUBASE2020 evaluation of nuclear physics properties", Chin. Phys. C 45, 030001 (2021).
 The file is the original AMDC distribution (sha256 1585a5ee…9859).
 
-half_life(zzaaa) -> (seconds | None for stable, text as written in NUBASE)
+half_life(zzaaa, state=0) -> (seconds | None for stable, text as written in NUBASE)
+state 0 is the ground state, 1 the first isomer (Xe-133m, Kr-85m…), 2 the second.
 """
 
 from __future__ import annotations
@@ -24,7 +25,7 @@ UNITS = {"ys": 1e-24, "zs": 1e-21, "as": 1e-18, "fs": 1e-15, "ps": 1e-12, "ns": 
          "ky": 1e3 * YEAR_S, "My": 1e6 * YEAR_S, "Gy": 1e9 * YEAR_S, "Ty": 1e12 * YEAR_S,
          "Py": 1e15 * YEAR_S, "Ey": 1e18 * YEAR_S, "Zy": 1e21 * YEAR_S, "Yy": 1e24 * YEAR_S}
 
-_cache: Dict[int, Tuple[Optional[float], str]] = {}
+_cache: Dict[Tuple[int, int], Tuple[Optional[float], str]] = {}
 
 
 def _load() -> None:
@@ -32,12 +33,13 @@ def _load() -> None:
         if ln.startswith("#") or len(ln) < 80:
             continue
         a, zi = int(ln[0:3]), ln[4:8]
-        if zi[3] != "0":                       # ground states only
+        state = int(zi[3])
+        if state > 2:                          # 3+ are levels quoted for other reasons
             continue
         z = int(zi[:3])
         t, unit = ln[69:78].strip(), ln[78:80].strip()
         if t == "stbl":
-            _cache[z * 1000 + a] = (None, "estable")
+            _cache[(z * 1000 + a, state)] = (None, "estable")
             continue
         try:
             value = float(t.replace("#", "").replace(">", "").replace("<", "").replace("~", ""))
@@ -45,16 +47,18 @@ def _load() -> None:
             continue
         if unit not in UNITS:
             continue
-        _cache[z * 1000 + a] = (value * UNITS[unit], f"{t} {unit}")
+        _cache[(z * 1000 + a, state)] = (value * UNITS[unit], f"{t} {unit}")
 
 
-def half_life(zzaaa: int) -> Tuple[Optional[float], str]:
+def half_life(zzaaa: int, state: int = 0) -> Tuple[Optional[float], str]:
     """(T½ in s or None if stable, original NUBASE text). KeyError if not in NUBASE."""
     if not _cache:
         _load()
-    return _cache[int(zzaaa)]
+    return _cache[(int(zzaaa), int(state))]
 
 
 if __name__ == "__main__":
     for zz in (55137, 53131, 54133, 95243, 92237, 56138):
         print(zz, half_life(zz))
+    for zz in (54133, 36085, 54135):
+        print(zz, "m", half_life(zz, 1))
