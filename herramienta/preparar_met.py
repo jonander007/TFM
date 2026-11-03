@@ -11,14 +11,14 @@ This script reads datos/arcon/met_original/MET0n.MET and writes herramienta/MET0
   * direction 000 is written as 360 (ARCON96 takes north as 360, not 0);
   * a record whose day/hour breaks the sequence and duplicates a later one is relabelled
     with the hour it fills (MET05: "251 23" between 250 22 and 251 00 is 250 23);
-  * missing hours get a record with missing-data values (999 direction and speed, 99
-    stability: out of range, so ARCON96 counts the hour as missing). Check this against
-    the EXAMPLE.MET supplied with ARCON96; with --interpolar, gaps of up to 12 h are filled
-    by interpolation instead (circular for direction, nearest for stability);
+  * missing hours (gaps of up to 11 h) are filled by interpolation between the records
+    on both sides: circular for direction, linear for speed, nearest for stability. With
+    --codigo-ausente they get 999/999/99 instead; ARCON96 stopped with rc=1 on files
+    written that way, so it is not the default;
   * a summary (data recovery, calms, stability classes) is printed and written to
     datos/arcon/resumen_met.csv for the memoria.
 
-Usage: python preparar_met.py [--interpolar]
+Usage: python preparar_met.py [--codigo-ausente]
 """
 import argparse, csv
 from collections import Counter
@@ -109,9 +109,10 @@ def process(n, interp):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--interpolar", action="store_true", help="fill gaps of up to 12 h by interpolation")
+    ap.add_argument("--codigo-ausente", action="store_true",
+                    help="fill gaps with 999/999/99 instead of interpolating")
     a = ap.parse_args()
-    rows = [process(n, a.interpolar) for n in range(1, 6)]
+    rows = [process(n, not a.codigo_ausente) for n in range(1, 6)]
     with (HERE.parent / "datos" / "arcon" / "resumen_met.csv").open("w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0]))
         w.writeheader()

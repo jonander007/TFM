@@ -138,3 +138,4 @@ Originales en `datos/arcon/met_original/`; `herramienta/preparar_met.py` genera 
 
 ### Carpeta de ejecución
 `ejecucion/TFM_ejecucion/` contiene todo lo necesario para ejecutar en Windows (PIPELINE.py, zonas_emergencia.py, visor, plantilla, MET01–05, Defaults con .nif, .rft e .inp, EJECUTAR.bat y LEEME.txt). Probada de principio a fin con ejecutables simulados (ARCON96 y RADTRAD falsos): las cuatro fases terminan y se genera el mapa. Por defecto: 5 ficheros MET y registro en pipeline.log.
+- **Ejecución real (03/11):** ARCON96 terminó con rc=1 en todos los casos. Causa más probable: los registros 999/999/99 añadidos para las horas faltantes (estabilidad fuera de rango). `preparar_met.py` interpola ahora esos huecos por defecto (`--codigo-ausente` para el modo anterior); la memoria lo refleja. La carpeta de ejecución incluye `MET_originales/` para aislar el problema si persiste.

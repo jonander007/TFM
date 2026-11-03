@@ -38,8 +38,15 @@ QUÉ ENVIARME PARA LA MEMORIA
   Comprime y envía:  ARCON\  (sobre todo los .xlsx y .txt de χ/Q)  y  psf_batch\postprocess\
   y el registro de la ejecución, pipeline.log, que se crea en esta carpeta.
 
+SI ARCON96 TERMINA CON ERROR (rc=1)
+  * Envíame el fichero .out y el ISMR.log de una de las carpetas ARCON\X_..._V_...\
+    (por ejemplo ARCON\X_068_V_002\X_068_V_002.out). Ahí está el mensaje de ARCON96.
+  * Prueba rápida: copia los ficheros de MET_originales\ sobre los MET de esta carpeta y
+    vuelve a ejecutar con 1 o 2 distancias. Si así funciona, el problema está en la
+    preparación de los MET.
+
 ANTES DE EJECUTAR, COMPRUEBA
   * Con el EXAMPLE.MET de tu ARCON96: que el viento va en 3 cifras de dirección + 3 de velocidad
-    (décimas de m/s) y que 999/99 se acepta como dato ausente. Si no, avísame y regenero los MET.
+    (décimas de m/s). Las horas sin registro están interpoladas (no hay códigos 999).
   * Que RADTRAD acepta el caudal de 1,0E+06 cfm del camino 2 de template_kpfhr.psf
     (si no, pon 1,0E+05 en las dos líneas de ese camino).
