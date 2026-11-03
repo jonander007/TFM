@@ -8,7 +8,7 @@ El trabajo define las zonas de emergencia (EAB y LPZ) alrededor de un metanero c
 
 | Carpeta | Contenido |
 |---|---|
-| `memoria/` | `TFM_v7_revisado.docx` (versión de trabajo, con cambios controlados y comentarios), `TFMhastael6.docx` (versión original) y `ANALISIS_COHERENCIA.md` (estado de la revisión y puntos abiertos). |
+| `memoria/` | `TFM_v7_revisado.docx` (versión de trabajo, con cambios controlados y comentarios), `TFM_v7_limpia.docx` (misma versión con todos los cambios aceptados y sin comentarios), `TFMhastael6.docx` (versión original) y `ANALISIS_COHERENCIA.md` (estado de la revisión y puntos abiertos). |
 | `herramienta/` | Herramienta de cálculo. `PIPELINE.py` encadena ARCON96, RADTRAD, el postproceso y el mapa; `zonas_emergencia.py` calcula los radios del EAB y la LPZ y genera el mapa; `visor_zonas.html` es la interfaz del mapa. Junto a ellos están las entradas que el pipeline busca en su carpeta: `template_kpfhr.psf` (modelo de emisión directa al ambiente), `template_master.psf` (ejemplo BWR original de RADTRAD) y `Defaults/` (`.nif`, `kpfhr_directo.rft` y `MHA.rft` de referencia). |
 | `herramienta/generar_nif.py` | Genera el inventario de RADTRAD (`kpfhr_terminofuente.nif`) a partir del término fuente atenuado del Excel corregido. |
 | `herramienta/legacy/` | Scripts anteriores (`NIF.py`, `RADTRAD_batch_post_integrated.py`). Su funcionalidad ya está integrada en `PIPELINE.py`; se conservan como histórico. |
