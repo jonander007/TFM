@@ -4,10 +4,16 @@
 preparar_met.py — check and repair the ARCON96 hourly meteorological files
 
 ARCON96 needs one record per hour (KP-TR-012 §7.8.3) in fixed columns:
-  "MET01 0100100  225020 07  267066"
+  "MET01 0100100  225020 07   267066"
    id    YYDDDHH  lower dir+speed (0.1 m/s)  stability  upper dir+speed
+Columns read by ARCON96 (1-based), deduced from its QA output (subroutine METREAD) on the
+original files: lower direction 16-18, lower speed 19-21, stability 23-24, upper direction
+28-30, upper speed 31-33. The original files had the upper wind one column to the left
+(and MET01 every field one column to the left), so ARCON96 rejected the stability of every
+hour and stopped with a division by zero.
 This script reads datos/arcon/met_original/MET0n.MET and writes herramienta/MET0n.MET:
-  * the year is written with two digits (MET01 used one, which shifts every column);
+  * the year is written with two digits (MET01 used one, which shifts every column) and the
+    upper wind starts in column 28;
   * direction 000 is written as 360 (ARCON96 takes north as 360, not 0);
   * a record whose day/hour breaks the sequence and duplicates a later one is relabelled
     with the hour it fills (MET05: "251 23" between 250 22 and 251 00 is 250 23);
@@ -95,7 +101,7 @@ def process(n, interp):
     with out.open("w", encoding="latin-1", newline="\r\n") as f:
         for d, h in hours:
             v = filled[(d, h)]
-            f.write(f"{sid} {year:02d}{d:03d}{h:02d}  {v[0]:03d}{v[1]:03d} {v[2]:02d}  {v[3]:03d}{v[4]:03d}\n")
+            f.write(f"{sid} {year:02d}{d:03d}{h:02d}  {v[0]:03d}{v[1]:03d} {v[2]:02d}   {v[3]:03d}{v[4]:03d}\n")
     valid = [v for v in data.values()]
     st = Counter(v[2] for v in valid)
     summary = dict(fichero=out.name, horas=len(hours), registros_validos=len(data),
@@ -105,6 +111,16 @@ def process(n, interp):
                    velocidad_media_10m=round(sum(v[1] for v in valid) / len(valid) / 10, 2),
                    correcciones="; ".join(notes + ([f"año con 2 cifras"] if n == 1 else [])))
     return summary
+
+
+def check_columns(path):
+    """Read a file back with ARCON96's columns and return the number of invalid hours."""
+    bad = 0
+    for ln in path.read_text(encoding="latin-1").splitlines():
+        ln = ln.ljust(33)
+        d1, s1, st, d2, s2 = (int(ln[a:b].replace(" ", "0")) for a, b in ((15, 18), (18, 21), (22, 24), (27, 30), (30, 33)))
+        bad += not (1 <= d1 <= 360 and 1 <= d2 <= 360 and 1 <= st <= 7 and s1 < 999 and s2 < 999)
+    return bad
 
 
 def main():
@@ -119,6 +135,9 @@ def main():
         w.writerows(rows)
     for r in rows:
         print(r)
+    for n in range(1, 6):
+        f = HERE / f"MET{n:02d}.MET"
+        print(f"{f.name}: {check_columns(f)} hours invalid when read with ARCON96 columns")
 
 
 if __name__ == "__main__":

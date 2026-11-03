@@ -39,14 +39,13 @@ QUÉ ENVIARME PARA LA MEMORIA
   y el registro de la ejecución, pipeline.log, que se crea en esta carpeta.
 
 SI ARCON96 TERMINA CON ERROR (rc=1)
-  * Envíame el fichero .out y el ISMR.log de una de las carpetas ARCON\X_..._V_...\
-    (por ejemplo ARCON\X_068_V_002\X_068_V_002.out). Ahí está el mensaje de ARCON96.
-  * Prueba rápida: copia los ficheros de MET_originales\ sobre los MET de esta carpeta y
-    vuelve a ejecutar con 1 o 2 distancias. Si así funciona, el problema está en la
-    preparación de los MET.
+  * Los MET de esta carpeta ya tienen las columnas que lee ARCON96 (comprobado con su salida QA):
+    dirección inferior 16-18, velocidad inferior 19-21, estabilidad 23-24, dirección superior
+    28-30, velocidad superior 31-33. No uses los MET originales: ARCON96 descarta la estabilidad
+    de todas o casi todas sus horas y termina con 'floating-point error: divide by zero'.
+  * Si aun así falla, envíame el .out, el ISMR.log y el .qa de una carpeta ARCON\X_..._V_...\
 
 ANTES DE EJECUTAR, COMPRUEBA
-  * Con el EXAMPLE.MET de tu ARCON96: que el viento va en 3 cifras de dirección + 3 de velocidad
-    (décimas de m/s). Las horas sin registro están interpoladas (no hay códigos 999).
+  * Borra las carpetas ARCON\ y psf_batch\ de ejecuciones anteriores.
   * Que RADTRAD acepta el caudal de 1,0E+06 cfm del camino 2 de template_kpfhr.psf
     (si no, pon 1,0E+05 en las dos líneas de ese camino).
