@@ -1,0 +1,6 @@
+fichero,horas,registros_validos,horas_faltantes,recuperacion_pct,calmas_pct,clase_A_pct,clase_B_pct,clase_C_pct,clase_D_pct,clase_E_pct,clase_F_pct,clase_G_pct,velocidad_media_10m,correcciones
+MET01.MET,8760,8696,64,99.27,0.98,27.7,9.5,10.3,30.5,13.9,6.1,1.9,6.68,77 direcciones 000 -> 360; año con 2 cifras
+MET02.MET,8760,8696,64,99.27,1.15,27.4,9.8,10.3,30.4,14.1,6.0,2.0,6.67,80 direcciones 000 -> 360
+MET03.MET,8760,8696,64,99.27,1.16,27.0,9.8,11.0,29.8,14.2,6.2,1.9,6.69,69 direcciones 000 -> 360
+MET04.MET,8760,8696,64,99.27,1.01,27.1,10.0,10.2,30.9,14.0,5.9,2.0,6.67,66 direcciones 000 -> 360
+MET05.MET,8760,8692,68,99.22,1.07,26.9,10.6,10.0,30.6,13.9,6.0,1.9,6.68,day 251 h23 -> day 250 h23; 73 direcciones 000 -> 360
