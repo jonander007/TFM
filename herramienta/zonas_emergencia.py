@@ -15,7 +15,7 @@ interpolation between the last distance that exceeds it and the next one.
 Outputs, next to the inputs:
   zonas_emergencia.json   radii, criteria and dose–distance envelopes
   mapa_zonas.html         interactive viewer (visor_zonas.html with the results embedded):
-                          ship on a CARTO or Esri base map with the EAB and LPZ circles,
+                          ship on an OpenStreetMap base map with the EAB and LPZ circles,
                           editable position, heading and dose criteria, dose–distance chart;
                           schematic view in metres when there is no internet access
   mapa_zonas.png          static schematic for reports (requires matplotlib)
@@ -186,6 +186,12 @@ def escribir_mapa(resultado: Dict, html: Path, fuente: str = "") -> Path:
     data = dict(resultado, _fuente=fuente or html.parent.name)
     page = VISOR.read_text(encoding="utf-8").replace(
         "/*DATOS*/null/*FIN*/", "/*DATOS*/%s/*FIN*/" % json.dumps(data, ensure_ascii=False))
+    # Leaflet goes inside the page, so mapa_zonas.html works on its own and offline
+    leaflet = VISOR.parent / "vendor" / "leaflet" / "leaflet.js"
+    tag = '<script src="vendor/leaflet/leaflet.js"></script>'
+    if leaflet.exists() and tag in page:
+        page = page.replace(tag, "<script>/* Leaflet 1.9.4, BSD-2-Clause, (c) Volodymyr Agafonkin */\n"
+                            + leaflet.read_text(encoding="utf-8") + "\n</script>")
     html.write_text(PAGE % page, encoding="utf-8")
     return html
 

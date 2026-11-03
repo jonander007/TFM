@@ -24,7 +24,7 @@ Requiere Windows con ARCON96 y RADTRAD instalados, Python 3.10 o posterior y `pi
 1. Los ficheros meteorológicos `MET01.MET` … `MET05.MET` ya están en `herramienta/`, preparados con `preparar_met.py` a partir de los originales de `datos/arcon/met_original/` (un registro por hora, año con dos cifras, norte = 360). La carpeta `herramienta/Defaults/` ya trae el inventario (`kpfhr_terminofuente.nif`), el fichero de liberación (`kpfhr_directo.rft`) y los factores de dosis (`fgr11&12.inp`, con el H-3 añadido); la plantilla por defecto es `template_kpfhr.psf`.
 2. Si los ejecutables no están en `C:\ARCON96\arcon96f.exe` y `C:\RADTRAD\RADTRAD3.03x\Distribution0203\BatchModeVersion\radtrad.exe`, cambia esas rutas al principio de `PIPELINE.py`.
 3. Ejecuta `python PIPELINE.py` desde `herramienta/`. Todas las preguntas se hacen al inicio y después el cálculo es desatendido.
-4. Abre `psf_batch/postprocess/mapa_zonas.html` para ver el buque con las zonas sobre el mapa.
+4. Ejecuta `python ver_mapa.py` (o `VER_MAPA.bat`) para ver el buque con las zonas sobre OpenStreetMap: sirve `psf_batch/postprocess/mapa_zonas.html` en `http://localhost`, porque `tile.openstreetmap.org` no sirve teselas a ficheros abiertos desde el disco. Leaflet 1.9.4 va incluido en `herramienta/vendor/leaflet/` y dentro del propio HTML generado.
 
 `zonas_emergencia.py` también funciona por separado sobre unos resultados ya calculados:
 
