@@ -909,10 +909,11 @@ def _locate_frac(lines):
     return None
 
 def _replace_frac(lines, idx, f1, f2, f3):
-    old = lines[idx]; parts = old.split()
-    indent = old[:old.index(parts[0])] if parts else b""
+    # RADTRAD reads this line in fixed 13-character fields ("   9.5000E-01   4.8500E-02 …");
+    # one extra leading blank cut the exponent of the first value (0.11 read as 1.1).
+    old = lines[idx]
     nl = b"\r\n" if old.endswith(b"\r\n") else b"\n"
-    lines[idx] = indent + _e11(f1) + b" " + _e11(f2) + b" " + _e11(f3) + b" " + _e11(1.0) + nl
+    lines[idx] = b"".join(f"{v:13.4E}".encode() for v in (f1, f2, f3, 1.0)) + nl
 
 def _find_loc_start(lines, title_b):
     for i, l in enumerate(lines):
@@ -935,13 +936,17 @@ def _fill_location(lines, title, times, xqs):
     idx_cnt = next((k for k in range(idx_pair-1, idx_loc-1, -1) if lines[k].strip().isdigit()), None)
     end = idx_pair
     while end < len(lines) and _PAIR_RE.match(lines[end]): end += 1
-    ex = lines[idx_pair]; parts = ex.split()
-    indent = ex[:ex.index(parts[0])] if parts else b""
-    new_pairs = [indent + _e11(t) + b" " + _e11(q) + b"\r\n" for t, q in zip(times, xqs)]
+    # RADTRAD reads these pairs in fixed columns, exactly as in its own sample files
+    # ("    0.0000E+00    1.0954E-01"); one blank more or less shifted the fields and the
+    # X/Q were read 100 times too large and 12 h as 1.2 h.
+    nl = b"\r\n" if lines[idx_pair].endswith(b"\r\n") else b"\n"
+    times, xqs = list(times), list(xqs)
+    if times[-1] < 720.0:                    # 10 rows, like the sample (same value to 720 h)
+        times.append(720.0); xqs.append(xqs[-1])
+    new_pairs = [f"    {t:10.4E}    {q:10.4E}".encode() + nl for t, q in zip(times, xqs)]
     if idx_cnt is not None:
-        cl = lines[idx_cnt]; ci = cl[:len(cl)-len(cl.lstrip(b" "))]
-        cn = b"\r\n" if cl.endswith(b"\r\n") else b"\n"
-        lines[idx_cnt] = ci + str(len(times)).encode() + cn
+        cn = b"\r\n" if lines[idx_cnt].endswith(b"\r\n") else b"\n"
+        lines[idx_cnt] = f" {len(times):2d}".encode() + cn      # " 10", as in the sample
     lines[idx_pair:end] = new_pairs
 
 def _replace_out_name(lines, name):
@@ -986,6 +991,42 @@ def inp_nuclides(inp_path: Path):
     i = next(k for k, l in enumerate(lines) if "NUCLIDES DEFINED" in l)
     n = int(lines[i].split()[0])
     return {l.split()[0] for l in lines[i + 1:i + 1 + n] if l.strip()}
+
+
+def inp_for_nif(src_inp: Path, nif_path: Path, out_inp: Path) -> Path:
+    """Write a dose conversion file with exactly the nuclides of the .nif, in its order.
+
+    RADTRAD assigns the dose factors by position, not by name: with the standard 60-nuclide
+    fgr11&12.inp the n-th nuclide of the inventory took the factors of the n-th nuclide of
+    the .inp ("inventory and dose files are inconsistent" at the top of the .o0)."""
+    name_re = re.compile(r"[A-Z][a-z]?-\d{1,3}m?")
+    nif = [l.strip() for l in nif_path.read_text(encoding="utf-8", errors="replace").splitlines()
+           if name_re.fullmatch(l.strip())]
+    raw = src_inp.read_bytes()
+    nl = "\r\n" if b"\r\n" in raw else "\n"
+    lines = raw.decode("cp1252").split(nl)
+    i = next(k for k, l in enumerate(lines) if "NUCLIDES DEFINED" in l)
+    n = int(lines[i].split()[0])
+    listed = {l.split()[0]: l for l in lines[i + 1:i + 1 + n] if l.strip()}
+    j = i + 1 + n                                    # CLOUDSHINE … column headings (2 lines)
+    heading = lines[j:j + 2]
+    blocks, k = {}, j + 2
+    while k < len(lines):
+        name = lines[k].strip()
+        if name_re.fullmatch(name):
+            blocks[name] = lines[k:k + 10]           # name + 9 organ rows
+            k += 10
+        else:
+            k += 1
+    missing = [x for x in nif if x not in blocks or x not in listed]
+    if missing:
+        raise ValueError(f"No dose factors in {src_inp.name} for: {', '.join(missing)}")
+    count = lines[i].replace(str(n), str(len(nif)), 1)
+    out = lines[:i] + [count.rjust(len(lines[i]))] + [listed[x] for x in nif] + heading
+    for x in nif:
+        out += blocks[x]
+    out_inp.write_bytes((nl.join(out) + nl).encode("cp1252"))
+    return out_inp
 
 
 def check_dcf(nif_path: Path, inp_path: Path):
@@ -1480,7 +1521,13 @@ def main():
     out_root.mkdir(parents=True, exist_ok=True)
     template_lines = _read_template(template_path)
     logging.info("PSF plant power level set to %.1f MWth (inventory .nif in Ci/MWth)", PLANT_POWER_MWTH)
-    check_dcf(SCRIPT_DIR / "Defaults" / support_names[1], SCRIPT_DIR / "Defaults" / support_names[2])
+    defaults = SCRIPT_DIR / "Defaults"
+    check_dcf(defaults / support_names[1], defaults / support_names[2])
+    # RADTRAD needs the .inp to list the same nuclides as the .nif, in the same order
+    nif_inp = defaults / (Path(support_names[1]).stem + "_dcf.inp")
+    inp_for_nif(defaults / support_names[2], defaults / support_names[1], nif_inp)
+    support_names = (support_names[0], support_names[1], nif_inp.name)
+    logging.info("Dose factors for RADTRAD: %s (same nuclides and order as %s)", nif_inp.name, support_names[1])
     xq_table = load_xq_table(XQ_EXCEL, EXPECTED_TIMES)
     acc_csv = out_root / "postprocess" / "post_timeseries_accum.csv"
     runs_index: List[Dict] = []
