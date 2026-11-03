@@ -1045,6 +1045,17 @@ def interval_xq(times, xqs, label=""):
     Returns (start_times, values).
     """
     X = dict(zip(times, xqs))
+    # The 0→t average cannot grow with t (a longer window only dilutes it). It can in the
+    # bridge Excel when an averaging period has no sector values and only the overall one
+    # (different quantity), which makes Eq. 105 explode; cap it at the previous period.
+    prev = None
+    for t in times:
+        if prev is not None and X[t] > X[prev] * 1.0001:
+            if (label, "mono", t) not in _negative_logged:
+                _negative_logged.add((label, "mono", t))
+                logging.warning("%s X/Q(0→%g h) = %.3e > X/Q(0→%g h) = %.3e: capped", label, t, X[t], prev, X[prev])
+            X[t] = X[prev]
+        prev = t
     starts, values = [0.0], [max(X[1], X[2])]
     later = [t for t in times if t >= 2]
     for t1, t2 in zip(later, later[1:]):
