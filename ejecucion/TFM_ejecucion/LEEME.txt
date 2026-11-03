@@ -45,7 +45,10 @@ SI ARCON96 TERMINA CON ERROR (rc=1)
     dirección inferior 16-18, velocidad inferior 19-21, estabilidad 23-24, dirección superior
     28-30, velocidad superior 31-33. No uses los MET originales: ARCON96 descarta la estabilidad
     de todas o casi todas sus horas y termina con 'floating-point error: divide by zero'.
-  * Si aun así falla, envíame el .out, el ISMR.log y el .qa de una carpeta ARCON\X_..._V_...\
+  * Si aun así falla, el pipeline se detiene antes de RADTRAD, conserva las carpetas de los casos
+    fallidos y copia en pipeline.log el mensaje de ARCON96. Envíame pipeline.log y la carpeta del
+    primer caso fallido (la indica el propio log). Para una prueba rápida usa distancias de 10 a 20 m
+    con paso 10.
 
 ANTES DE EJECUTAR, COMPRUEBA
   * Borra las carpetas ARCON\ y psf_batch\ de ejecuciones anteriores.

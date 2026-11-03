@@ -410,6 +410,7 @@ def _delete_arcon_dirs():
     dirs = [
         sub for sub in CWD.iterdir()
         if sub.is_dir() and (sub.name[0].isdigit() or RE_CASE.match(sub.name))
+        and sub.name not in FAILED_CASES          # keep failed cases for diagnosis
     ]
     if not dirs:
         return   # nothing to delete
@@ -545,6 +546,23 @@ def _parse_log(case_dir, log_out, intervals_out, p95_path=None):
         with intervals_out.open("a", encoding="utf-8") as f: f.writelines(int_buf)
 
 
+FAILED_CASES = set()          # ARCON96 cases that ended with rc != 0 (their folders are kept)
+
+
+def _report_arcon_failure(dir_name):
+    """Copy ARCON96's own messages for a failed case into the log."""
+    case_dir = CWD / dir_name
+    for name in (f"{dir_name}.out", "ISMR.log"):
+        f = case_dir / name
+        if not f.exists():
+            logging.error("  %s: not written", name)
+            continue
+        lines = [l.rstrip() for l in f.read_text(encoding="cp1252", errors="replace").splitlines() if l.strip()]
+        logging.error("  last lines of %s:", f)
+        for l in lines[-15:]:
+            logging.error("    | %s", l)
+
+
 def _run_case(case, exe, met_base, num_met):
     """Run one ARCON96 case in its own directory. case = (dir_name, rsf).
     Safe to call from several threads; log parsing is done afterwards in order."""
@@ -555,6 +573,7 @@ def _run_case(case, exe, met_base, num_met):
     rc = _run_arcon(case_dir, rsf, exe, f"{case_dir.name}_user.qa")
     for m in mets: _unlink(m)
     if rc != 0:
+        FAILED_CASES.add(dir_name)
         logging.error("ARCON96 rc=%d — %s", rc, dir_name)
     else:
         logging.info("ARCON96 OK — %s", dir_name)
@@ -1394,6 +1413,17 @@ def main():
                  len(overall_cases) + len(sector_cases), workers)
     _run_parallel(lambda c: _run_case(c, ARCON_EXE, MET_BASE, num_met),
                   overall_cases + sector_cases, workers)
+
+    all_cases = overall_cases + sector_cases
+    if FAILED_CASES:
+        first = sorted(FAILED_CASES)[0]
+        logging.error("%d of %d ARCON96 cases failed; their folders are kept in %s. Messages of %s:",
+                      len(FAILED_CASES), len(all_cases), CWD, first)
+        _report_arcon_failure(first)
+        if len(FAILED_CASES) == len(all_cases):
+            logging.error("Every ARCON96 case failed: stopping before RADTRAD. Send pipeline.log and the folder %s",
+                          CWD / first)
+            return 1
 
     _write_p95_header(PERCENTIL95_OVERALL)
     for name, _ in overall_cases:
