@@ -4,16 +4,19 @@
 preparar_met.py — check and repair the ARCON96 hourly meteorological files
 
 ARCON96 needs one record per hour (KP-TR-012 §7.8.3) in fixed columns:
-  "MET01 0100100  225020 07   267066"
-   id    YYDDDHH  lower dir+speed (0.1 m/s)  stability  upper dir+speed
-Columns read by ARCON96 (1-based), deduced from its QA output (subroutine METREAD) on the
-original files: lower direction 16-18, lower speed 19-21, stability 23-24, upper direction
-28-30, upper speed 31-33. The original files had the upper wind one column to the left
-(and MET01 every field one column to the left), so ARCON96 rejected the stability of every
-hour and stopped with a division by zero.
+  "MET01 0100100   225020 07   267066"
+   id    YYDDDHH   lower dir+speed (0.1 m/s)  stability  upper dir+speed
+Columns read by ARCON96 (1-based), from its QA output (subroutine METREAD), checked hour by
+hour on 8,760 records: lower direction 17-19, lower speed 20-22, stability 24-25, upper
+direction 29-31, upper speed 32-34. The date is assumed in columns 7-13, where every
+version of the files has it. The original files (and the first two versions written by
+this script) had every wind field one column to the left, so ARCON96 rejected the
+stability of every hour and stopped with a division by zero.
+MET_alternativa/ holds the same data with a leading blank on every line (date also one
+column to the right), in case ARCON96 reads the date there too.
 This script reads datos/arcon/met_original/MET0n.MET and writes herramienta/MET0n.MET:
-  * the year is written with two digits (MET01 used one, which shifts every column) and the
-    upper wind starts in column 28;
+  * the year is written with two digits (MET01 used one) and the wind fields start in
+    columns 17 and 29;
   * direction 000 is written as 360 (ARCON96 takes north as 360, not 0);
   * a record whose day/hour breaks the sequence and duplicates a later one is relabelled
     with the hour it fills (MET05: "251 23" between 250 22 and 251 00 is 250 23);
@@ -73,7 +76,7 @@ def interpolate(a, b, f):
             round(a[3] + f * db) % 360 or 360, round(a[4] + f * (b[4] - a[4])))
 
 
-def process(n, interp):
+def process(n, interp, outdir=HERE, lead=""):
     recs = read(SRC / f"MET{n:02d}.MET")
     sid, year = recs[0][0], recs[0][1]
     notes = fix_sequence(recs)
@@ -97,11 +100,12 @@ def process(n, interp):
             if lo is not None and hi is not None and hi - lo - 1 <= 12:
                 val = interpolate(data[hours[lo]], data[hours[hi]], (i - lo) / (hi - lo))
         filled[k] = val
-    out = HERE / f"MET{n:02d}.MET"
+    out = outdir / f"MET{n:02d}.MET"
     with out.open("w", encoding="latin-1", newline="\r\n") as f:
         for d, h in hours:
             v = filled[(d, h)]
-            f.write(f"{sid} {year:02d}{d:03d}{h:02d}  {v[0]:03d}{v[1]:03d} {v[2]:02d}   {v[3]:03d}{v[4]:03d}\n")
+            gap = "  " if lead else "   "        # wind fields always start in column 17
+            f.write(f"{lead}{sid} {year:02d}{d:03d}{h:02d}{gap}{v[0]:03d}{v[1]:03d} {v[2]:02d}   {v[3]:03d}{v[4]:03d}\n")
     valid = [v for v in data.values()]
     st = Counter(v[2] for v in valid)
     summary = dict(fichero=out.name, horas=len(hours), registros_validos=len(data),
@@ -117,8 +121,8 @@ def check_columns(path):
     """Read a file back with ARCON96's columns and return the number of invalid hours."""
     bad = 0
     for ln in path.read_text(encoding="latin-1").splitlines():
-        ln = ln.ljust(33)
-        d1, s1, st, d2, s2 = (int(ln[a:b].replace(" ", "0")) for a, b in ((15, 18), (18, 21), (22, 24), (27, 30), (30, 33)))
+        ln = ln.ljust(34)
+        d1, s1, st, d2, s2 = (int(ln[a:b].replace(" ", "0")) for a, b in ((16, 19), (19, 22), (23, 25), (28, 31), (31, 34)))
         bad += not (1 <= d1 <= 360 and 1 <= d2 <= 360 and 1 <= st <= 7 and s1 < 999 and s2 < 999)
     return bad
 
@@ -129,6 +133,10 @@ def main():
                     help="fill gaps with 999/999/99 instead of interpolating")
     a = ap.parse_args()
     rows = [process(n, not a.codigo_ausente) for n in range(1, 6)]
+    alt = HERE / "MET_alternativa"
+    alt.mkdir(exist_ok=True)
+    for n in range(1, 6):
+        process(n, not a.codigo_ausente, alt, lead=" ")
     with (HERE.parent / "datos" / "arcon" / "resumen_met.csv").open("w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0]))
         w.writeheader()
