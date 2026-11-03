@@ -941,14 +941,16 @@ def _fill_location(lines, title, times, xqs):
     idx_cnt = next((k for k in range(idx_pair-1, idx_loc-1, -1) if lines[k].strip().isdigit()), None)
     end = idx_pair
     while end < len(lines) and _PAIR_RE.match(lines[end]): end += 1
-    # RADTRAD reads these pairs in fixed columns, exactly as in its own sample files
-    # ("    0.0000E+00    1.0954E-01"); one blank more or less shifted the fields and the
-    # X/Q were read 100 times too large and 12 h as 1.2 h.
+    # RADTRAD reads the X/Q pairs in fixed columns: time in characters 4-13, one column
+    # skipped, X/Q in 15-24 (1-based), i.e. "   0.0000E+00 1.5629E-02". Deduced from two
+    # runs whose .o0 echoed the table: with any other spacing it dropped the exponents
+    # (X/Q read 100 times too large, 12 h read as 1.2 h). template_master.psf has that
+    # wrong spacing ("    0.0000E+00    1.0954E-01"), so it is not a valid reference here.
     nl = b"\r\n" if lines[idx_pair].endswith(b"\r\n") else b"\n"
     times, xqs = list(times), list(xqs)
     if times[-1] < 720.0:                    # 10 rows, like the sample (same value to 720 h)
         times.append(720.0); xqs.append(xqs[-1])
-    new_pairs = [f"    {t:10.4E}    {q:10.4E}".encode() + nl for t, q in zip(times, xqs)]
+    new_pairs = [f"   {t:10.4E} {q:10.4E}".encode() + nl for t, q in zip(times, xqs)]
     if idx_cnt is not None:
         cn = b"\r\n" if lines[idx_cnt].endswith(b"\r\n") else b"\n"
         lines[idx_cnt] = f" {len(times):2d}".encode() + cn      # " 10", as in the sample
