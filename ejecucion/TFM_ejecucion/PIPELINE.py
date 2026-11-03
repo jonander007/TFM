@@ -641,12 +641,12 @@ def _period_layout(n_values, header=None):
 
 
 def _parse_cfd(cfd_path):
-    """Numeric rows of an ISMR.cfd as (xoq, {hour: count}) for HORAS_VALIDAS.
+    """Rows of an ISMR.cfd as {hour: (xoq, count)} for HORAS_VALIDAS.
 
     ARCON96 writes the table in blocks side by side, each with its own XOQ column:
         XOQ   1   2   4   8      XOQ  12  24  96  168  360  720
-    so the header is read token by token and every data token is mapped to the
-    column with the same position (the XOQ columns repeat the first value)."""
+    The X/Q range (UPPER LIM. / LOW LIM. in ISMR.log) is set per averaging period, so
+    each count is paired with the XOQ of its own block, not with the first column."""
     try: raw = cfd_path.read_text(encoding="cp1252", errors="replace").splitlines()
     except Exception as e: logging.warning("Cannot read %s: %s", cfd_path, e); return []
     cols, rows = None, []
@@ -663,9 +663,14 @@ def _parse_cfd(cfd_path):
         if len(vals) != len(cols):
             continue
         vals = [float(v) for v in vals]
-        counts = {h: v for h, v in zip(cols, vals) if h is not None}
+        counts, xoq = {}, None
+        for h, v in zip(cols, vals):
+            if h is None:
+                xoq = v                       # XOQ of the block that follows
+            else:
+                counts[h] = (xoq, v)
         if all(h in counts for h in HORAS_VALIDAS):
-            rows.append((vals[0], counts))
+            rows.append(counts)
     if cols is None:
         logging.warning("No XOQ header in %s", cfd_path)
     else:
@@ -673,7 +678,7 @@ def _parse_cfd(cfd_path):
         if layout not in _layout_logged:
             _layout_logged.add(layout)
             logging.info("ARCON96 period layout: %s h", ", ".join(map(str, layout)))
-    return [(x, {h: c[h] for h in HORAS_VALIDAS}) for x, c in rows]
+    return [{h: c[h] for h in HORAS_VALIDAS} for c in rows]
 
 
 def _interp_xoq(pairs, target):
@@ -741,7 +746,7 @@ def _build_percent_maps(totals, targets):
             for idx, hora in enumerate(HORAS_VALIDAS):
                 total = tot[idx]
                 if not total or total <= 0: continue
-                ac_pairs = [(xoq, max(0.0, min(1.0, (total - cnt[hora]) / total))) for xoq, cnt in rows]
+                ac_pairs = [(r[hora][0], max(0.0, min(1.0, (total - r[hora][1]) / total))) for r in rows]
                 for t in targets:
                     xq = _interp_xoq(ac_pairs, t)
                     if xq is not None: perc_maps[hora][t][v][xxx] = xq

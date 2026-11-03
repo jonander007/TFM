@@ -150,9 +150,17 @@ def radio(env: pd.DataFrame, crit: Criterio) -> Zona:
 
 def calcular_zonas(postprocess: Path) -> Dict:
     acc_csv = postprocess / "post_timeseries_accum.csv"
-    w2h_xlsx = postprocess / "Sets_Worst2h.xlsx"
+    # If Sets_Worst2h.xlsx was open in Excel, PIPELINE.py saved Sets_Worst2h_01.xlsx, _02…:
+    # take the newest one, and ignore it if it is older than this run's time series.
+    found = sorted(postprocess.glob("Sets_Worst2h*.xlsx"), key=lambda f: f.stat().st_mtime)
+    w2h_xlsx = found[-1] if found else None
     acc = leer_acumulada(acc_csv) if acc_csv.exists() else None
-    if w2h_xlsx.exists():
+    if w2h_xlsx and acc_csv.exists() and w2h_xlsx.stat().st_mtime < acc_csv.stat().st_mtime - 60:
+        logging.warning("%s is older than %s (from a previous run): using the time series",
+                        w2h_xlsx.name, acc_csv.name)
+        w2h_xlsx = None
+    if w2h_xlsx:
+        logging.info("Worst 2-h EAB doses from %s", w2h_xlsx.name)
         eab = leer_worst2h(w2h_xlsx)
     elif acc is not None:
         eab = worst2h_desde_acumulada(acc)
