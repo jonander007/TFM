@@ -236,3 +236,4 @@ Originales en `datos/arcon/met_original/`; `herramienta/preparar_met.py` genera 
   - Las más largas se pueden partir, pero el pie siempre va con las tres primeras filas y la cabecera se repite.
   - Antes, una tabla de 16 a 30 filas que no cabía pasaba entera a la página siguiente y dejaba el pie solo; era el caso de la ficha técnica del KP-FHR.
   - El pie de los datos meteorológicos transformados se había separado de su tabla; vuelve debajo de ella, lo que intercambia la numeración de las Tablas 16 y 17.
+- **Tablas y pies, segundo ajuste (04/11).** El criterio por número de filas no bastaba: la Tabla 5 tiene 13 filas, pero casi ocupa una página, y Word separaba el pie de la tabla. Ahora se estima la altura de cada tabla a partir del texto de sus celdas. Las que ocupan menos de media página se mantienen enteras con su pie. Las más altas se pueden partir entre filas: el pie va siempre con las dos primeras filas y la cabecera se repite.
