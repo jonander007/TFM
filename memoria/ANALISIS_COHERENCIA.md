@@ -164,3 +164,19 @@ Originales en `datos/arcon/met_original/`; `herramienta/preparar_met.py` genera 
   - **Capítulos:** cada capítulo (Título 1) empieza en página nueva. Se han quitado los 10 saltos de página manuales que había delante para no dejar páginas en blanco, pero se mantiene la página en blanco entre la portada y el Resumen (está dentro de la sección de la portada y no lleva encabezado ni número).
   - **Tablas:** las 24 tablas tienen el formato de la Tabla 1 (cabecera 1F3864 con texto blanco en negrita, bordes grises de 0,5 pt, 9 pt; 8 pt en el catálogo del Anexo A y en la muestra de datos meteorológicos). La cabecera se repite en cada página y las filas no se parten. Las tablas de hasta 30 filas se mantienen enteras en una página y unidas a su título.
 - **Tabla 5 y versión limpia (04/11):** la columna «Código» de la Tabla 5 pasa de 0,74 a 1 cm de ancho para que la cabecera quepa en una línea; el ancho sale de la columna de descripción. La versión limpia se genera ahora aceptando los cambios directamente en el XML, sin pasar por LibreOffice. LibreOffice renombraba los estilos (Ttulo1 → Heading1), rehacía los encabezados y perdía los saltos de página y la página en blanco. El texto resultante coincide con el de la versión revisada con los cambios aceptados; la única diferencia es que ya no quedan la viñeta vacía y la tabla antigua del Anexo C, que estaban borradas.
+- **Selección del reactor: cribado revisado (04/11), en las dos versiones.**
+  - **C2 con umbral:** excluye los sistemas primarios presurizados (más de 1 MPa: agua y helio). Antes no tenía valor y los reactores de agua aparecían como C6 aunque el C2 se aplica antes. Actualizada también su fila en la Tabla 5.
+  - **Asignaciones:** los reactores de agua y de helio pasan a C2. El C3 se aplicaba también a HTGR prismáticos (GTHTR300, GT-MHR, HTTR, HTR50S, HTGR-POLA, MHR-100, MHR-T) y a reactores rápidos de helio (EM2, FMR) que no son de lecho de esferas. CALOGENA (piscina a baja presión) queda en C6. Otros cambios:
+    - MMR, Jimmy, AMR, HOLOS y Pylon D1: C2;
+    - Aurora: C1 (sodio);
+    - Stellarium y XAMR: C1 (cloruros);
+    - LFTR: C10 (U-233);
+    - ThorCon: C4 (módulo de 4 años);
+    - BREST-OD-300 y LFR-AS-200: C10 (plutonio); antes BREST era C9, mientras SEALER-55, también de plomo, pasaba;
+    - Energy Well, Flex Reactor y CA Waste Burner: C5;
+    - Thorizon: C11.
+  - **Candidatos:** quedan 4 (KP-FHR, CMSR, SEALER-55 e IMSR-400); el MMR sale.
+  - **Pendiente:** repetir el AHP en SMART sin el MMR y sustituir la Figura 1 (comentario en el texto).
+  - **Tabla 6 fuera del cuerpo:** el texto solo nombra los candidatos y remite al Anexo A, que ahora incluye la tabla «Primer criterio de exclusión de cada diseño», con la justificación de los 70 diseños.
+  - **Catálogo del Anexo A corregido:** datos desplazados o mezclados entre filas en los bloques de sales fundidas y de microrreactores (IMSR, LFTR, Stellarium, ThorCon, Thorizon, XAMR, AMR, Aurora, ELENA, Energy Well, eVinci, Jimmy, MoveluX, Pylon D1, SHELF), Blue Capsule (< 5 % en vez de 0,05), CMSR (LEU < 5 %), BREST-OD-300 (nombre completo) y tres filas sin nombre eliminadas.
+  - **Fuentes:** prensa técnica y fabricantes; el catálogo del OIEA no era accesible. Quedan por confirmar el enriquecimiento de ELENA y de Energy Well, el tipo del AMR y la sal de Thorizon.
