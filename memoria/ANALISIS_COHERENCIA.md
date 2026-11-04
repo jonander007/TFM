@@ -237,3 +237,16 @@ Originales en `datos/arcon/met_original/`; `herramienta/preparar_met.py` genera 
   - Antes, una tabla de 16 a 30 filas que no cabía pasaba entera a la página siguiente y dejaba el pie solo; era el caso de la ficha técnica del KP-FHR.
   - El pie de los datos meteorológicos transformados se había separado de su tabla; vuelve debajo de ella, lo que intercambia la numeración de las Tablas 16 y 17.
 - **Tablas y pies, segundo ajuste (04/11).** El criterio por número de filas no bastaba: la Tabla 5 tiene 13 filas, pero casi ocupa una página, y Word separaba el pie de la tabla. Ahora se estima la altura de cada tabla a partir del texto de sus celdas. Las que ocupan menos de media página se mantienen enteras con su pie. Las más altas se pueden partir entre filas: el pie va siempre con las dos primeras filas y la cabecera se repite.
+- **v8 (04/11): nueva base.** `TFM_v8.docx` es la versión del autor, con sus cambios hasta el marco de cálculo. Desde ella, cada revisión se aplica con control de cambios y se generan `TFM_v8_revisado.docx` y `TFM_v8_limpia.docx` (scripts en `memoria/scripts`).
+- **Capítulo 8, accidente postulado (04/11), sobre la v8.**
+  - **Edificio del reactor:** se trata como en el capítulo 9 (E1 con su factor de atenuación, E2 sin él); antes el texto decía que su retención era mínima.
+  - **RVACS:** transfiere el calor por radiación a paneles de agua (KP-TR-012).
+  - **Tritio:** liberación instantánea, como en Kairos. Su papel dominante se presenta como resultado del ejemplo de Kairos.
+  - **Párrafo nuevo con las hipótesis del cálculo:** inventario a 320 MWₜₕ, liberación en 2 h, sin desintegración y periodos de integración de la Tabla 4. Sustituye a los dos párrafos finales, que repetían lo dicho.
+  - **Apartado nuevo 8.1, sucesos iniciadores durante la escala:**
+    - pérdida de la planta eléctrica del buque y de la conexión a tierra;
+    - colisión → E2;
+    - incendio → E1;
+    - manipulación de combustible excluida;
+    - inundación fuera del alcance.
+  - **E2 calculado por la herramienta:** con `kpfhr_terminofuente_E2.nif`. Como el edificio solo divide por 2 los yodos y las partículas y domina el tritio, se espera E2 ≈ E1; hay que confirmarlo con la ejecución.
