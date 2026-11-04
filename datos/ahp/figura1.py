@@ -1,10 +1,10 @@
-"""Figura de la memoria (AHP) con el estilo de SMART (Plotly). Lee resultados_ahp.json y TFM_KP-FHR_final.smt
+"""Figura de la memoria (AHP) con el estilo de SMART (Plotly). Lee resultados_ahp.json y TFM_KP-FHR_final_v2.smt
 y escribe un HTML; la imagen se obtiene haciendo captura del gráfico a 2x."""
 import json, sys
 sys.path.insert(0, "pylib")  # plotly 5.24 (pip install plotly)
 import plotly.graph_objects as go
 res = json.load(open("/home/user/TFM/datos/ahp/resultados_ahp.json"))
-model = json.load(open("/home/user/TFM/datos/ahp/TFM_KP-FHR_final.smt"))
+model = json.load(open("/home/user/TFM/datos/ahp/TFM_KP-FHR_final_v2.smt"))
 rt = model["Alternative Rating"]["Rating Table"]
 COL = {"Decommissioning & Waste": "rgb(127,201,127)", "Fuel Cycle Characteristics": "rgb(190,174,212)",
        "Licensing Status": "rgb(253,192,134)", "Maritime Operational Challenges": "rgb(56,108,176)",

@@ -208,4 +208,4 @@ Originales en `datos/arcon/met_original/`; `herramienta/preparar_met.py` genera 
     - método, consistencia, justificación y sensibilidad (0,524 frente a 0,449 y 0,506 frente a 0,435);
     - tablas de la matriz de criterios, pesos, intensidades de las escalas, calificaciones y puntuación;
     - figura con el reparto de la puntuación de cada candidato.
-  - **Pendiente:** cargar `TFM_KP-FHR_final.smt` en SMART y regenerar su informe para que coincida.
+  - **Pendiente:** cargar `TFM_KP-FHR_final_v2.smt` (el mismo modelo, renombrado para no confundirlo con la versión anterior) en SMART y regenerar su informe para que coincida.

@@ -2,7 +2,7 @@
     "General": {
         "Date": "04-11-2025",
         "Analyst": "JGL",
-        "Description": "Selection of SMR for maritime propulsion via AHP [TFM final, consistent rating scales]"
+        "Description": "Selection of SMR for maritime propulsion via AHP [TFM final v2: all rating scales with CR < 0.10]"
     },
     "Alternatives": {
         "Alternatives": [
