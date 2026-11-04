@@ -8,7 +8,7 @@
         "Alternatives": [
             "SEALER-55",
             "KP-FHR",
-            "IMSR400",
+            "IMSR-400",
             "CMSR",
             "Use Rating Scale"
         ]
@@ -338,9 +338,9 @@
                 "('Started', 'Work in Progress')": 3
             },
             "Operational Experience": {
-                "('High', 'Medium')": 4,
+                "('High', 'Medium')": 3,
                 "('High', 'Low')": 9,
-                "('Medium', 'Low')": 6
+                "('Medium', 'Low')": 3
             },
             "TRL": {
                 "('9', '7-8')": 2,
@@ -360,9 +360,9 @@
                 "('Limited', 'Very Limited')": 3
             },
             "Need for Specific Equipment": {
-                "('High', 'Medium')": 0.25,
+                "('High', 'Medium')": 0.3333333333333333,
                 "('High', 'Low')": 0.1111111111111111,
-                "('Medium', 'Low')": 0.16666666666666666
+                "('Medium', 'Low')": 0.3333333333333333
             },
             "Historical Mishappenings": {
                 "('Limited Past Reactor Issues', 'No Past Issues')": 0.2
@@ -386,9 +386,9 @@
                 "('Medium', 'Low')": 0.3333333333333333
             },
             "Component Qualification": {
-                "('High', 'Medium')": 0.25,
-                "('High', 'Low')": 0.16666666666666666,
-                "('Medium', 'Low')": 0.25
+                "('High', 'Medium')": 0.3333333333333333,
+                "('High', 'Low')": 0.1111111111111111,
+                "('Medium', 'Low')": 0.3333333333333333
             },
             "Coolant Temperature": {
                 "('High (> 850 K)', 'Medium (700-800 K)')": 0.5,
@@ -406,9 +406,9 @@
                 "('Enrichment Increase', 'Reactor Resizing')": 3
             },
             "Type": {
-                "('Loop with Forced Convection', 'Loop with Natural Convection')": 0.25,
+                "('Loop with Forced Convection', 'Loop with Natural Convection')": 0.3333333333333333,
                 "('Loop with Forced Convection', 'Integral')": 0.1111111111111111,
-                "('Loop with Natural Convection', 'Integral')": 0.16666666666666666
+                "('Loop with Natural Convection', 'Integral')": 0.3333333333333333
             },
             "Weight": {
                 "('Very Heavy (> 1000 t)', 'Heavy (500-1000 t)')": 0.5,
@@ -464,7 +464,7 @@
                 "Type": "Loop with Forced Convection",
                 "Weight": "Medium (250-500 t)"
             },
-            "IMSR400": {
+            "IMSR-400": {
                 "Discharge Burnup": "Low (< 40 MWd)",
                 "Waste Streams": "High",
                 "Enrichment": "Low (0.7-5 %)",

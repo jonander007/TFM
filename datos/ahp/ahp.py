@@ -21,7 +21,8 @@ from pathlib import Path
 import numpy as np
 
 HERE = Path(__file__).resolve().parent
-RI = {1: 0.0, 2: 0.0, 3: 0.58, 4: 0.90, 5: 1.12, 6: 1.24, 7: 1.32, 8: 1.41, 9: 1.45, 10: 1.49}
+RI = {1: 0.0, 2: 0.0, 3: 0.4914, 4: 0.8286, 5: 1.0598, 6: 1.1797, 7: 1.2520, 8: 1.3, 9: 1.35, 10: 1.38}
+# random indices used by IDOM-SMART (deduced from its Report.html), so the CR match the tool's report
 
 
 def matrix(items, comparisons):

@@ -199,3 +199,13 @@ Originales en `datos/arcon/met_original/`; `herramienta/preparar_met.py` genera 
   - **Resultado:** KP-FHR 0,623, SEALER-55 0,434, CMSR 0,216 e IMSR-400 0,193.
   - **Figura 1** rehecha con el estilo de SMART (`datos/ahp/figura1.py`).
   - **Anexo B:** añade la justificación de «Approved» (permiso de construcción de Hermes, NRC, diciembre de 2023) y dos casos de sensibilidad, en los que el KP-FHR sigue primero. El caso combinado, en el que el SEALER-55 quedaría primero, se avisa en un comentario.
+- **AHP con el informe de SMART (04/11).**
+  - **`ahp.py`** usa ahora los índices aleatorios de SMART, deducidos de su `Report.html`, y reproduce sus razones de consistencia: 0,047 en criterios, como máximo 0,094 en subcriterios y 0,096 en escalas.
+  - **Escalas:** se han rehecho otras cuatro que SMART marcaba con 0,110 (Operational Experience, Need for Specific Equipment, Component Qualification y Type), manteniendo su orientación. IMSR400 pasa a llamarse IMSR-400.
+  - **Resultado final:** KP-FHR 0,639, SEALER-55 0,449, CMSR 0,222 e IMSR-400 0,199.
+  - **Capítulo de selección:** nueva figura de pesos (la del informe de SMART) con su comentario, Figura 2 (ranking) actualizada y un párrafo que explica el resultado por criterios.
+  - **Anexo B:**
+    - método, consistencia, justificación y sensibilidad (0,524 frente a 0,449 y 0,506 frente a 0,435);
+    - tablas de la matriz de criterios, pesos, intensidades de las escalas, calificaciones y puntuación;
+    - figura con el reparto de la puntuación de cada candidato.
+  - **Pendiente:** cargar `TFM_KP-FHR_final.smt` en SMART y regenerar su informe para que coincida.

@@ -9,34 +9,34 @@
     "Reactor System Characteristics": 0.03912779386539894
   },
   "consistencia": {
-    "Selection of SMR for maritime propulsion": 0.044624216156378835,
+    "Selection of SMR for maritime propulsion": 0.04704789562813104,
     "Decommissioning & Waste": 0.0,
     "Fuel Cycle Characteristics": 0.0,
-    "Licensing Status": 0.04622549644738984,
+    "Licensing Status": 0.054560008016862234,
     "Maritime Operational Challenges": 0.0,
     "Political Considerations": 0.0,
-    "Reactor Core Characteristics": 0.046225496447391365,
-    "Reactor System Characteristics": 0.08897945988404296,
-    "escala Discharge Burnup": -7.656710514656253e-16,
-    "escala Waste Streams": 3.8283552573281263e-16,
-    "escala Enrichment": 0.04385852752346844,
-    "escala Refueling Time": 0.016970105370907988,
-    "escala Licensing Initiated": 0.00605324580166458,
-    "escala Operational Experience": 0.09297183953014802,
-    "escala TRL": 0.00741830290260033,
+    "Reactor Core Characteristics": 0.054560008016864045,
+    "Reactor System Characteristics": 0.09352761740799634,
+    "escala Discharge Burnup": -9.037224457673232e-16,
+    "escala Waste Streams": 4.518612228836616e-16,
+    "escala Enrichment": 0.04763779238609896,
+    "escala Refueling Time": 0.018432409888748717,
+    "escala Licensing Initiated": 0.0071446531643578675,
+    "escala Operational Experience": 0.0,
+    "escala TRL": 0.00783968602652611,
     "escala Limiting Operational Factors": 0.0,
-    "escala Need for Specific Equipment": 0.09297183953015146,
+    "escala Need for Specific Equipment": 4.518612228836616e-16,
     "escala Historical Mishappenings": 0.0,
     "escala Safety Perception": 0.0,
-    "escala Coolant Toxicity": 0.08104750691856306,
+    "escala Coolant Toxicity": 0.09566046807644805,
     "escala Fuel Safety": 0.0,
-    "escala Source Term": 3.8283552573281263e-16,
-    "escala Component Qualification": 0.09297183953015299,
-    "escala Coolant Temperature": -7.656710514656253e-16,
-    "escala Dimensions": 0.007933373029550743,
+    "escala Source Term": 4.518612228836616e-16,
+    "escala Component Qualification": 4.518612228836616e-16,
+    "escala Coolant Temperature": -9.037224457673232e-16,
+    "escala Dimensions": 0.00936376955054829,
     "escala Power Scalability": 0.0,
-    "escala Type": 0.09297183953015146,
-    "escala Weight": 0.007105632254274786
+    "escala Type": 4.518612228836616e-16,
+    "escala Weight": 0.007717920623759724
   },
   "subcriterios": {
     "Discharge Burnup": {
@@ -170,8 +170,8 @@
     },
     "Operational Experience": {
       "High": 1.0,
-      "Medium": 0.3466806371753172,
-      "Low": 0.08012497612818935
+      "Medium": 0.3333333333333335,
+      "Low": 0.11111111111111112
     },
     "TRL": {
       "9": 1.0,
@@ -186,8 +186,8 @@
       "Very Limited": 0.11111111111111112
     },
     "Need for Specific Equipment": {
-      "High": 0.08012497612818936,
-      "Medium": 0.23112042478354497,
+      "High": 0.11111111111111106,
+      "Medium": 0.33333333333333337,
       "Low": 1.0
     },
     "Historical Mishappenings": {
@@ -214,8 +214,8 @@
       "Low": 1.0
     },
     "Component Qualification": {
-      "High": 0.12018746419228418,
-      "Medium": 0.3466806371753173,
+      "High": 0.11111111111111106,
+      "Medium": 0.33333333333333337,
       "Low": 1.0
     },
     "Coolant Temperature": {
@@ -234,8 +234,8 @@
       "Reactor Resizing": 0.11111111111111112
     },
     "Type": {
-      "Loop with Forced Convection": 0.08012497612818936,
-      "Loop with Natural Convection": 0.23112042478354497,
+      "Loop with Forced Convection": 0.11111111111111106,
+      "Loop with Natural Convection": 0.33333333333333337,
       "Integral": 1.0
     },
     "Weight": {
@@ -246,9 +246,9 @@
     }
   },
   "puntuaciones": {
-    "SEALER-55": 0.43371197034011577,
-    "KP-FHR": 0.6234616466106669,
-    "IMSR400": 0.19299639495134185,
-    "CMSR": 0.2155111212652083
+    "SEALER-55": 0.44898688439617274,
+    "KP-FHR": 0.6390431634139407,
+    "IMSR-400": 0.1992727703978181,
+    "CMSR": 0.22207445621169863
   }
 }

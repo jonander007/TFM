@@ -1,5 +1,5 @@
-"""Figura 1 de la memoria: ranking AHP con el estilo de SMART (Plotly). Genera fig_final.html; la imagen se
-obtiene haciendo captura del SVG a 2x (ver memoria). Lee resultados_ahp.json y TFM_KP-FHR_final.smt."""
+"""Figura de la memoria (AHP) con el estilo de SMART (Plotly). Lee resultados_ahp.json y TFM_KP-FHR_final.smt
+y escribe un HTML; la imagen se obtiene haciendo captura del gráfico a 2x."""
 import json, sys
 sys.path.insert(0, "pylib")  # plotly 5.24 (pip install plotly)
 import plotly.graph_objects as go
