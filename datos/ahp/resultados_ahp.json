@@ -1,18 +1,18 @@
 {
   "criterios": {
-    "Decommissioning & Waste": 0.062242345269647656,
-    "Fuel Cycle Characteristics": 0.09815081409328888,
-    "Licensing Status": 0.1010807214079276,
-    "Maritime Operational Challenges": 0.311540262750948,
-    "Political Considerations": 0.16610633230649383,
-    "Reactor Core Characteristics": 0.21591818577184177,
-    "Reactor System Characteristics": 0.044961338399852495
+    "Decommissioning & Waste": 0.05875263005614571,
+    "Fuel Cycle Characteristics": 0.08904635557039965,
+    "Licensing Status": 0.3033194173737639,
+    "Maritime Operational Challenges": 0.23439517442818214,
+    "Political Considerations": 0.1207742848037072,
+    "Reactor Core Characteristics": 0.15458434390240244,
+    "Reactor System Characteristics": 0.03912779386539894
   },
   "consistencia": {
-    "Selection of SMR for maritime propulsion": 0.06707860492644102,
+    "Selection of SMR for maritime propulsion": 0.044624216156378835,
     "Decommissioning & Waste": 0.0,
     "Fuel Cycle Characteristics": 0.0,
-    "Licensing Status": 0.0,
+    "Licensing Status": 0.04622549644738984,
     "Maritime Operational Challenges": 0.0,
     "Political Considerations": 0.0,
     "Reactor Core Characteristics": 0.046225496447391365,
@@ -23,6 +23,7 @@
     "escala Refueling Time": 0.016970105370907988,
     "escala Licensing Initiated": 0.06587478878070079,
     "escala Operational Experience": 0.09297183953014802,
+    "escala TRL": 0.0,
     "escala Limiting Operational Factors": 0.10094807735712027,
     "escala Need for Specific Equipment": 0.09297183953015146,
     "escala Historical Mishappenings": 0.0,
@@ -41,97 +42,102 @@
     "Discharge Burnup": {
       "criterio": "Decommissioning & Waste",
       "local": 0.6666666666666667,
-      "global": 0.041494896846431775
+      "global": 0.03916842003743048
     },
     "Waste Streams": {
       "criterio": "Decommissioning & Waste",
       "local": 0.3333333333333333,
-      "global": 0.020747448423215884
+      "global": 0.019584210018715235
     },
     "Enrichment": {
       "criterio": "Fuel Cycle Characteristics",
       "local": 0.25,
-      "global": 0.02453770352332222
+      "global": 0.022261588892599913
     },
     "Refueling Time": {
       "criterio": "Fuel Cycle Characteristics",
       "local": 0.75,
-      "global": 0.07361311056996667
+      "global": 0.06678476667779974
     },
     "Licensing Initiated": {
       "criterio": "Licensing Status",
-      "local": 0.25,
-      "global": 0.0252701803519819
+      "local": 0.5936336852603001,
+      "global": 0.18006062354659458
     },
     "Operational Experience": {
       "criterio": "Licensing Status",
-      "local": 0.75,
-      "global": 0.0758105410559457
+      "local": 0.15705578941099324,
+      "global": 0.047638070539319025
+    },
+    "TRL": {
+      "criterio": "Licensing Status",
+      "local": 0.24931052532870662,
+      "global": 0.0756207232878503
     },
     "Limiting Operational Factors": {
       "criterio": "Maritime Operational Challenges",
-      "local": 0.75,
-      "global": 0.23365519706321097
+      "local": 0.3333333333333334,
+      "global": 0.07813172480939407
     },
     "Need for Specific Equipment": {
       "criterio": "Maritime Operational Challenges",
-      "local": 0.25,
-      "global": 0.077885065687737
+      "local": 0.6666666666666666,
+      "global": 0.15626344961878808
     },
     "Historical Mishappenings": {
       "criterio": "Political Considerations",
       "local": 0.25,
-      "global": 0.041526583076623456
+      "global": 0.0301935712009268
     },
     "Safety Perception": {
       "criterio": "Political Considerations",
       "local": 0.75,
-      "global": 0.12457974922987036
+      "global": 0.09058071360278039
     },
     "Coolant Toxicity": {
       "criterio": "Reactor Core Characteristics",
       "local": 0.33251592768713867,
-      "global": 0.07179623584644791
+      "global": 0.051401756518615026
     },
     "Fuel Safety": {
       "criterio": "Reactor Core Characteristics",
       "local": 0.5278361334067454,
-      "global": 0.11396942031000831
+      "global": 0.0815952023706627
     },
     "Source Term": {
       "criterio": "Reactor Core Characteristics",
       "local": 0.13964793890611585,
-      "global": 0.03015252961538553
+      "global": 0.0215873850131247
     },
     "Component Qualification": {
       "criterio": "Reactor System Characteristics",
       "local": 0.11754478223203106,
-      "global": 0.005284970731071317
+      "global": 0.004599268009128119
     },
     "Coolant Temperature": {
       "criterio": "Reactor System Characteristics",
       "local": 0.08068423361134489,
-      "global": 0.00362767113093243
+      "global": 0.0031569960609323954
     },
     "Dimensions": {
       "criterio": "Reactor System Characteristics",
       "local": 0.043740006383896975,
-      "global": 0.0019666092286381004
+      "global": 0.0017114499534603546
     },
     "Power Scalability": {
       "criterio": "Reactor System Characteristics",
       "local": 0.4102102374220587,
-      "global": 0.018443601299817015
+      "global": 0.01605062161132667
     },
     "Type": {
       "criterio": "Reactor System Characteristics",
       "local": 0.23668342033738862,
-      "global": 0.01064160335542386
+      "global": 0.009260900082318913
     },
     "Weight": {
       "criterio": "Reactor System Characteristics",
       "local": 0.1111373200132798,
-      "global": 0.004996882653969773
+      "global": 0.0043485581482324885
     }
   },
   "intensidades": {
@@ -166,6 +172,13 @@
       "High": 1.0,
       "Medium": 0.3466806371753172,
       "Low": 0.08012497612818935
+    },
+    "TRL": {
+      "9": 1.0,
+      "7-8": 1.0,
+      "5-6": 1.0,
+      "3-4": 1.0,
+      "1-2": 1.0
     },
     "Limiting Operational Factors": {
       "Few Limitations": 1.0,
@@ -233,8 +246,9 @@
     }
   },
   "puntuaciones": {
-    "SEALER-55": 0.4383887113735157,
-    "MMR": 0.6667260012996717,
-    "KP-FHR": 0.37263184697512164
+    "SEALER-55": 0.43414167947557947,
+    "KP-FHR": 0.6176988037154871,
+    "IMSR400": 0.2742957280617754,
+    "CMSR": 0.2260073586842941
   }
 }

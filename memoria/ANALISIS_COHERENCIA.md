@@ -180,3 +180,14 @@ Originales en `datos/arcon/met_original/`; `herramienta/preparar_met.py` genera 
   - **Tabla 6 fuera del cuerpo:** el texto solo nombra los candidatos y remite al Anexo A, que ahora incluye la tabla «Primer criterio de exclusión de cada diseño», con la justificación de los 70 diseños.
   - **Catálogo del Anexo A corregido:** datos desplazados o mezclados entre filas en los bloques de sales fundidas y de microrreactores (IMSR, LFTR, Stellarium, ThorCon, Thorizon, XAMR, AMR, Aurora, ELENA, Energy Well, eVinci, Jimmy, MoveluX, Pylon D1, SHELF), Blue Capsule (< 5 % en vez de 0,05), CMSR (LEU < 5 %), BREST-OD-300 (nombre completo) y tres filas sin nombre eliminadas.
   - **Fuentes:** prensa técnica y fabricantes; el catálogo del OIEA no era accesible. Quedan por confirmar el enriquecimiento de ELENA y de Energy Well, el tipo del AMR y la sal de Thorizon.
+- **AHP final (04/11), en las dos versiones.** Modelo de SMART con 4 candidatos: `datos/ahp/TFM_KP-FHR_4alternativas.smt`, sin el MMR. La única calificación cambiada es el «Refueling Time» del IMSR-400 (pasa a «Online Refueling»).
+  - **`ahp.py`** reproduce los resultados del motor de SMART: KP-FHR 0,618 (39,8 %), SEALER-55 0,434 (28,0 %), IMSR-400 0,274 (17,7 %) y CMSR 0,226 (14,6 %).
+  - **Figura 1** sustituida por la del modelo final, con su texto alternativo corregido. Las puntuaciones se citan ahora en el texto, y la lista de subcriterios incluye la madurez tecnológica (TRL), que está en el modelo.
+  - **Anexo B rellenado:** método, consistencia, pesos de criterios y subcriterios, calificaciones de cada candidato y puntuación global.
+  - **Avisos en un comentario del Anexo B:**
+    - escalas de calificación con CR > 0,10 (Escalabilidad de potencia 0,187; Corrientes de residuos, Seguridad del combustible y Término fuente 0,126; Factores operativos limitantes 0,101);
+    - la escala de TRL no distingue niveles (todas las comparaciones valen 1);
+    - en la escala de «Licensing Initiated», «Work in Progress» puntúa más que «Started»;
+    - la ventaja del KP-FHR viene sobre todo de «Approved» (0,180 de 0,618);
+    - hay diferencias con el Excel de calificaciones, aunque alineándolas el KP-FHR sigue primero;
+    - errata en la escala de peso («500-100 t»).
