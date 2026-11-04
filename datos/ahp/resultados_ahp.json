@@ -18,23 +18,23 @@
     "Reactor Core Characteristics": 0.046225496447391365,
     "Reactor System Characteristics": 0.08897945988404296,
     "escala Discharge Burnup": -7.656710514656253e-16,
-    "escala Waste Streams": 0.1258614204975126,
+    "escala Waste Streams": 3.8283552573281263e-16,
     "escala Enrichment": 0.04385852752346844,
     "escala Refueling Time": 0.016970105370907988,
-    "escala Licensing Initiated": 0.06587478878070079,
+    "escala Licensing Initiated": 0.00605324580166458,
     "escala Operational Experience": 0.09297183953014802,
-    "escala TRL": 0.0,
-    "escala Limiting Operational Factors": 0.10094807735712027,
+    "escala TRL": 0.00741830290260033,
+    "escala Limiting Operational Factors": 0.0,
     "escala Need for Specific Equipment": 0.09297183953015146,
     "escala Historical Mishappenings": 0.0,
     "escala Safety Perception": 0.0,
     "escala Coolant Toxicity": 0.08104750691856306,
-    "escala Fuel Safety": 0.1258614204975099,
-    "escala Source Term": 0.1258614204975126,
+    "escala Fuel Safety": 0.0,
+    "escala Source Term": 3.8283552573281263e-16,
     "escala Component Qualification": 0.09297183953015299,
     "escala Coolant Temperature": -7.656710514656253e-16,
     "escala Dimensions": 0.007933373029550743,
-    "escala Power Scalability": 0.18738066975485906,
+    "escala Power Scalability": 0.0,
     "escala Type": 0.09297183953015146,
     "escala Weight": 0.007105632254274786
   },
@@ -147,8 +147,8 @@
       "Low (< 40 MWd)": 0.24999999999999992
     },
     "Waste Streams": {
-      "High": 0.08549879733383493,
-      "Medium": 0.29240177382128674,
+      "High": 0.11111111111111106,
+      "Medium": 0.33333333333333337,
       "Low": 1.0
     },
     "Enrichment": {
@@ -165,8 +165,8 @@
     },
     "Licensing Initiated": {
       "Approved": 1.0,
-      "Started": 0.10844960613841662,
-      "Work in Progress": 0.3293168780041748
+      "Started": 0.3624601243342975,
+      "Work in Progress": 0.13137734173243432
     },
     "Operational Experience": {
       "High": 1.0,
@@ -175,15 +175,15 @@
     },
     "TRL": {
       "9": 1.0,
-      "7-8": 1.0,
-      "5-6": 1.0,
-      "3-4": 1.0,
-      "1-2": 1.0
+      "7-8": 0.5573996173327931,
+      "5-6": 0.2962501325228943,
+      "3-4": 0.15640337533499124,
+      "1-2": 0.08833488669294802
     },
     "Limiting Operational Factors": {
       "Few Limitations": 1.0,
-      "Limited": 0.28114422176724957,
-      "Very Limited": 0.07904207343311248
+      "Limited": 0.3333333333333335,
+      "Very Limited": 0.11111111111111112
     },
     "Need for Specific Equipment": {
       "High": 0.08012497612818936,
@@ -205,12 +205,12 @@
     },
     "Fuel Safety": {
       "High": 1.0,
-      "Medium": 0.29240177382128646,
-      "Low": 0.08549879733383482
+      "Medium": 0.3333333333333335,
+      "Low": 0.11111111111111112
     },
     "Source Term": {
-      "High": 0.08549879733383493,
-      "Medium": 0.29240177382128674,
+      "High": 0.11111111111111106,
+      "Medium": 0.33333333333333337,
       "Low": 1.0
     },
     "Component Qualification": {
@@ -230,8 +230,8 @@
     },
     "Power Scalability": {
       "Addition of Units": 1.0,
-      "Enrichment Increase": 0.26456684199470026,
-      "Reactor Resizing": 0.06999561388304851
+      "Enrichment Increase": 0.3333333333333335,
+      "Reactor Resizing": 0.11111111111111112
     },
     "Type": {
       "Loop with Forced Convection": 0.08012497612818936,
@@ -240,15 +240,15 @@
     },
     "Weight": {
       "Very Heavy (> 1000 t)": 0.12291522460215264,
-      "Heavy (500-100 t)": 0.2091169399698069,
+      "Heavy (500-1000 t)": 0.2091169399698069,
       "Medium (250-500 t)": 0.37106464500748065,
       "Light (< 250 t)": 1.0
     }
   },
   "puntuaciones": {
-    "SEALER-55": 0.43414167947557947,
-    "KP-FHR": 0.6176988037154871,
-    "IMSR400": 0.2742957280617754,
-    "CMSR": 0.2260073586842941
+    "SEALER-55": 0.43371197034011577,
+    "KP-FHR": 0.6234616466106669,
+    "IMSR400": 0.19299639495134185,
+    "CMSR": 0.2155111212652083
   }
 }
