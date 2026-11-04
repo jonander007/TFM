@@ -224,3 +224,15 @@ Originales en `datos/arcon/met_original/`; `herramienta/preparar_met.py` genera 
     - esferas (pebbles), recarga en línea, parada sin alimentación eléctrica, dos sistemas de evacuación del calor residual y contención funcional.
   - **Citas de 5.2 y 5.2.4:** colocadas antes de los dos puntos.
   - **Pendiente de fuente:** 140 MWe, grafito IBIDEN ET-10, acero 316H y barras de control con SCRAM.
+- **Capítulo 6, buque de referencia (04/11), en las dos versiones.**
+  - **Demanda térmica:** los 134 MWₜₕ son una cota superior. Suman toda la potencia eléctrica instalada y superan los 97–116 MWₜₕ que dan las calderas.
+  - **Acoplamiento:** el reactor se acopla a la turbina de vapor existente mediante el circuito intermedio y un generador de vapor; con 650 °C a la salida del reactor se puede producir el vapor actual, a 515 °C.
+  - **Sobredimensionamiento:** es conservador para las zonas de emergencia, porque el término fuente se calcula a 320 MWₜₕ.
+  - **Escalado con el NuScale:** se acota como orden de magnitud. Se añade la comprobación de la altura: el módulo NuScale mide 23,2 m frente a 18–20 m libres, pero su altura se debe a los componentes integrados en la vasija.
+  - **Alcance:** el peso, la estabilidad, el blindaje y las sociedades de clasificación pasan a líneas futuras; la introducción ya no los anuncia.
+  - **Correcciones menores:** texto alternativo de la Figura 3, «Valor típico» → «Valor» y fila de altura de la tabla de volúmenes.
+- **Tablas y sus pies (04/11).**
+  - Las tablas de hasta 15 filas se mantienen enteras junto a su pie.
+  - Las más largas se pueden partir, pero el pie siempre va con las tres primeras filas y la cabecera se repite.
+  - Antes, una tabla de 16 a 30 filas que no cabía pasaba entera a la página siguiente y dejaba el pie solo; era el caso de la ficha técnica del KP-FHR.
+  - El pie de los datos meteorológicos transformados se había separado de su tabla; vuelve debajo de ella, lo que intercambia la numeración de las Tablas 16 y 17.
