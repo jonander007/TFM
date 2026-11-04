@@ -1,5 +1,7 @@
+"""Figura 1 de la memoria: ranking AHP con el estilo de SMART (Plotly). Genera fig_final.html; la imagen se
+obtiene haciendo captura del SVG a 2x (ver memoria). Lee resultados_ahp.json y TFM_KP-FHR_final.smt."""
 import json, sys
-sys.path.insert(0, "pylib")
+sys.path.insert(0, "pylib")  # plotly 5.24 (pip install plotly)
 import plotly.graph_objects as go
 res = json.load(open("/home/user/TFM/datos/ahp/resultados_ahp.json"))
 model = json.load(open("/home/user/TFM/datos/ahp/TFM_KP-FHR_final.smt"))
@@ -31,4 +33,3 @@ fig.update_layout(barmode="stack", width=1400, height=823, template="plotly_whit
                   legend=dict(groupclick="toggleitem", tracegroupgap=8, traceorder="grouped"), margin=dict(l=70, r=20, t=70, b=90))
 fig.update_xaxes(tickfont=dict(size=14)); fig.update_layout(xaxis_ticktext=["<b>%s</b>" % a for a in alts], xaxis_tickvals=alts)
 fig.write_html("fig_final.html", include_plotlyjs=True, full_html=True, config={"displayModeBar": False})
-fig.write_image if False else None

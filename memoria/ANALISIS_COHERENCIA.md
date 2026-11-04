@@ -191,3 +191,11 @@ Originales en `datos/arcon/met_original/`; `herramienta/preparar_met.py` genera 
     - la ventaja del KP-FHR viene sobre todo de «Approved» (0,180 de 0,618);
     - hay diferencias con el Excel de calificaciones, aunque alineándolas el KP-FHR sigue primero;
     - errata en la escala de peso («500-100 t»).
+- **AHP: escalas corregidas (04/11).** El modelo final es `datos/ahp/TFM_KP-FHR_final.smt`. Cambios respecto a `TFM_KP-FHR_4alternativas.smt`:
+  - la escala de TRL era plana (todas las comparaciones valían 1) y ahora es monótona;
+  - en «Licensing Initiated» el orden queda Approved > Started > Work in Progress (antes estaba invertido entre las dos últimas);
+  - las cinco escalas con CR > 0,10 se han rehecho con comparaciones consistentes (3, 9, 3); ahora todas las escalas tienen CR ≤ 0,093;
+  - errata de la escala de peso corregida («500-1000 t»).
+  - **Resultado:** KP-FHR 0,623, SEALER-55 0,434, CMSR 0,216 e IMSR-400 0,193.
+  - **Figura 1** rehecha con el estilo de SMART (`datos/ahp/figura1.py`).
+  - **Anexo B:** añade la justificación de «Approved» (permiso de construcción de Hermes, NRC, diciembre de 2023) y dos casos de sensibilidad, en los que el KP-FHR sigue primero. El caso combinado, en el que el SEALER-55 quedaría primero, se avisa en un comentario.
