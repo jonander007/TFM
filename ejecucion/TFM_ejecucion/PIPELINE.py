@@ -62,6 +62,7 @@ if str(SCRIPT_DIR) not in sys.path:      # zonas_emergencia.py lives next to thi
 ARCON_EXE   = Path(r"C:\ARCON96\arcon96f.exe")
 RADTRAD_EXE = Path(r"C:\RADTRAD\RADTRAD3.03x\Distribution0203\BatchModeVersion\radtrad.exe")
 MET_BASE    = SCRIPT_DIR
+DEFAULTS_DIR = SCRIPT_DIR / "Defaults"   # .nif, .rft and .inp copied next to every .psf
 
 # ARCON96 output files
 SALIDA_LOG_OVERALL  = CWD / "Output_Log_Overall.txt"
@@ -278,7 +279,7 @@ def _ask_nif() -> str:
 
             raw_nif = input("  Output .nif name  (ENTER=i_SMR.nif): ").strip()
             nif_name = raw_nif if raw_nif else "i_SMR.nif"
-            defaults_dir = SCRIPT_DIR / "Defaults"
+            defaults_dir = DEFAULTS_DIR
             defaults_dir.mkdir(exist_ok=True)
             out_nif = defaults_dir / nif_name
 
@@ -1404,7 +1405,7 @@ def _manage_out_root(path, choice):
         path.rename(new); logging.info("Renamed → %s", new)
 
 def _copy_defaults(target_dir):
-    src = SCRIPT_DIR / "Defaults"
+    src = DEFAULTS_DIR
     if src.exists() and src.is_dir(): shutil.copytree(src, target_dir / "Defaults", dirs_exist_ok=True)
     else: logging.warning("Defaults folder not found: %s", src)
 
@@ -1424,12 +1425,47 @@ BANNER = """
 ╚══════════════════════════════════════════════════════════╝
 """
 
+def configure(arcon_dir=None, met_dir=None, defaults_dir=None, arcon_exe=None, radtrad_exe=None):
+    """Point the pipeline at other folders (used by the graphical interface, which keeps
+    its inputs in INPUT/ and its runs in RUN_N/)."""
+    global CWD, MET_BASE, DEFAULTS_DIR, ARCON_EXE, RADTRAD_EXE
+    global SALIDA_LOG_OVERALL, INTERVALOS_OVERALL, SALIDAS_LOG_SECTOR, INTERVALOS_SECTOR
+    global MAXIMO_SECTOR, TOTAL_XQ_COLUMNAS, PERCENTIL95_OVERALL, FRECUENCIAS_SECTOR
+    global XQ_EXCEL, TOTAL_XQ_EXCEL, XQ_MAX_TXT
+    if arcon_dir is not None:
+        CWD = Path(arcon_dir)
+        SALIDA_LOG_OVERALL  = CWD / "Output_Log_Overall.txt"
+        INTERVALOS_OVERALL  = CWD / "Intervals_Overall.txt"
+        SALIDAS_LOG_SECTOR  = CWD / "Output_Log_Sector.txt"
+        INTERVALOS_SECTOR   = CWD / "Intervals_Sector.txt"
+        MAXIMO_SECTOR       = CWD / "Maximum_Sector.txt"
+        TOTAL_XQ_COLUMNAS   = CWD / "Total_XQ_Sector_Columns.txt"
+        PERCENTIL95_OVERALL = CWD / "95th_PERCENTILE_XQ_VALUES.txt"
+        FRECUENCIAS_SECTOR  = CWD / "Frequencies_Sectors.txt"
+        XQ_EXCEL            = CWD / "99_5th_PERCENTILE_XQ_VALUES_Sector_BY_HOUR.xlsx"
+        TOTAL_XQ_EXCEL      = CWD / "TOTAL_XQs_BY_HOUR.xlsx"
+        XQ_MAX_TXT          = CWD / "XQ_Maximmun_by_hour.txt"
+    if met_dir is not None: MET_BASE = Path(met_dir)
+    if defaults_dir is not None: DEFAULTS_DIR = Path(defaults_dir)
+    if arcon_exe: ARCON_EXE = Path(arcon_exe)
+    if radtrad_exe: RADTRAD_EXE = Path(radtrad_exe)
+
+
 def main():
     print(BANNER)
     setup_logging()
+    return run(ask_all_params())
 
-    # ── ALL PARAMETERS UP FRONT ─────────────────────────────
-    p = ask_all_params()
+
+def run(p):
+    """Phases 1-4 with the parameters of ask_all_params(). Optional keys used by the
+    graphical interface: run_arcon / run_radtrad (default True) and bridge_excel (χ/Q
+    Excel of a previous ARCON96 run, used when run_arcon is False)."""
+    global XQ_EXCEL
+    do_arcon    = p.get("run_arcon", True)
+    do_radtrad  = p.get("run_radtrad", True)
+    if not do_arcon:
+        XQ_EXCEL = Path(p["bridge_excel"])
     num_met       = p["num_met"]
     dist_min      = p["dist_min"]
     dist_max      = p["dist_max"]
@@ -1447,75 +1483,84 @@ def main():
     # ── PRE-FLIGHT ───────────────────────────────────────────
     logging.info("Pre-flight checks...")
     errors = []
-    if not ARCON_EXE.exists():
+    if do_arcon and not ARCON_EXE.exists():
         errors.append(f"ARCON96 executable not found: {ARCON_EXE}")
     missing_mets = [f"MET{i:02d}.MET" for i in range(1, num_met+1)
-                    if not (MET_BASE / f"MET{i:02d}.MET").exists()]
+                    if not (MET_BASE / f"MET{i:02d}.MET").exists()] if do_arcon else []
     if missing_mets:
         errors.append(f"Missing MET files: {', '.join(missing_mets)}")
-    if not template_path.exists():
+    if not do_arcon and not XQ_EXCEL.exists():
+        errors.append(f"Bridge Excel not found: {XQ_EXCEL}")
+    if do_radtrad and not template_path.exists():
         errors.append(f"PSF template not found: {template_path}")
-    if not no_run and not radtrad_exe.exists():
+    if do_radtrad and not no_run and not radtrad_exe.exists():
         errors.append(f"RADTRAD executable not found: {radtrad_exe}")
     if errors:
         for e in errors: logging.error("  %s", e)
         return 2
 
-    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    # PHASE 1 — ARCON96
-    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    logging.info("=" * 62)
-    logging.info("PHASE 1  —  ARCON96  (%d distances, 17 cases each)", len(distances))
-    logging.info("=" * 62)
+    if do_arcon:
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        # PHASE 1 — ARCON96
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        logging.info("=" * 62)
+        logging.info("PHASE 1  —  ARCON96  (%d distances, 17 cases each)", len(distances))
+        logging.info("=" * 62)
 
-    # Ensure ARCON output directory exists
-    CWD.mkdir(exist_ok=True)
-    logging.info("ARCON96 directory: %s", CWD)
+        # Ensure ARCON output directory exists
+        CWD.mkdir(exist_ok=True)
+        logging.info("ARCON96 directory: %s", CWD)
 
-    _clean_arcon_dirs()
-    for f in [SALIDA_LOG_OVERALL, INTERVALOS_OVERALL, SALIDAS_LOG_SECTOR,
-              INTERVALOS_SECTOR, MAXIMO_SECTOR, TOTAL_XQ_COLUMNAS,
-              PERCENTIL95_OVERALL, FRECUENCIAS_SECTOR]:
-        _safe_rm(f)
+        _clean_arcon_dirs()
+        for f in [SALIDA_LOG_OVERALL, INTERVALOS_OVERALL, SALIDAS_LOG_SECTOR,
+                  INTERVALOS_SECTOR, MAXIMO_SECTOR, TOTAL_XQ_COLUMNAS,
+                  PERCENTIL95_OVERALL, FRECUENCIAS_SECTOR]:
+            _safe_rm(f)
 
-    # 1a/1b — OVERALL + SECTOR runs (in parallel; logs parsed afterwards in order)
-    xxx_values = np.round(np.linspace(22.5, 360, 16)).astype(int)
-    overall_cases = [(f"{v:03d}_{v:02d}", _gen_rsf(num_met, v)) for v in distances]
-    sector_cases  = [(f"X_{xxx:03d}_V_{v:03d}", _gen_rsf(num_met, v, xxx))
-                     for xxx in xxx_values for v in distances]
-    logging.info("  1a/1b) OVERALL + SECTOR runs  (%d cases, %d workers)",
-                 len(overall_cases) + len(sector_cases), workers)
-    _run_parallel(lambda c: _run_case(c, ARCON_EXE, MET_BASE, num_met),
-                  overall_cases + sector_cases, workers)
+        # 1a/1b — OVERALL + SECTOR runs (in parallel; logs parsed afterwards in order)
+        xxx_values = np.round(np.linspace(22.5, 360, 16)).astype(int)
+        overall_cases = [(f"{v:03d}_{v:02d}", _gen_rsf(num_met, v)) for v in distances]
+        sector_cases  = [(f"X_{xxx:03d}_V_{v:03d}", _gen_rsf(num_met, v, xxx))
+                         for xxx in xxx_values for v in distances]
+        logging.info("  1a/1b) OVERALL + SECTOR runs  (%d cases, %d workers)",
+                     len(overall_cases) + len(sector_cases), workers)
+        _run_parallel(lambda c: _run_case(c, ARCON_EXE, MET_BASE, num_met),
+                      overall_cases + sector_cases, workers)
 
-    all_cases = overall_cases + sector_cases
-    if FAILED_CASES:
-        first = sorted(FAILED_CASES)[0]
-        logging.error("%d of %d ARCON96 cases failed; their folders are kept in %s. Messages of %s:",
-                      len(FAILED_CASES), len(all_cases), CWD, first)
-        _report_arcon_failure(first)
-        if len(FAILED_CASES) == len(all_cases):
-            logging.error("Every ARCON96 case failed: stopping before RADTRAD. Send pipeline.log and the folder %s",
-                          CWD / first)
-            return 1
+        all_cases = overall_cases + sector_cases
+        if FAILED_CASES:
+            first = sorted(FAILED_CASES)[0]
+            logging.error("%d of %d ARCON96 cases failed; their folders are kept in %s. Messages of %s:",
+                          len(FAILED_CASES), len(all_cases), CWD, first)
+            _report_arcon_failure(first)
+            if len(FAILED_CASES) == len(all_cases):
+                logging.error("Every ARCON96 case failed: stopping before RADTRAD. Send pipeline.log and the folder %s",
+                              CWD / first)
+                return 1
 
-    _write_p95_header(PERCENTIL95_OVERALL)
-    for name, _ in overall_cases:
-        _parse_log(CWD / name, SALIDA_LOG_OVERALL, INTERVALOS_OVERALL, PERCENTIL95_OVERALL)
-    for name, _ in sector_cases:
-        _parse_log(CWD / name, SALIDAS_LOG_SECTOR, INTERVALOS_SECTOR)
+        _write_p95_header(PERCENTIL95_OVERALL)
+        for name, _ in overall_cases:
+            _parse_log(CWD / name, SALIDA_LOG_OVERALL, INTERVALOS_OVERALL, PERCENTIL95_OVERALL)
+        for name, _ in sector_cases:
+            _parse_log(CWD / name, SALIDAS_LOG_SECTOR, INTERVALOS_SECTOR)
 
-    # 1c — Build bridge Excel and auxiliary outputs
-    logging.info("  1c) Building bridge Excel and auxiliary outputs")
-    _extract_sector_maxima(SALIDAS_LOG_SECTOR, MAXIMO_SECTOR)
-    v_sorted, xxx_sorted, totals = _load_sector_totals()
-    _build_xq_excel(XQ_EXCEL, v_sorted, totals)     # ← Bridge: used directly by Phase 2
-    _build_total_excel(TOTAL_XQ_EXCEL, v_sorted, xxx_sorted, totals)
-    _export_max_txt(XQ_EXCEL, XQ_MAX_TXT)
-    logging.info("  Bridge Excel ready: %s", XQ_EXCEL.name)
+        # 1c — Build bridge Excel and auxiliary outputs
+        logging.info("  1c) Building bridge Excel and auxiliary outputs")
+        _extract_sector_maxima(SALIDAS_LOG_SECTOR, MAXIMO_SECTOR)
+        v_sorted, xxx_sorted, totals = _load_sector_totals()
+        _build_xq_excel(XQ_EXCEL, v_sorted, totals)     # ← Bridge: used directly by Phase 2
+        _build_total_excel(TOTAL_XQ_EXCEL, v_sorted, xxx_sorted, totals)
+        _export_max_txt(XQ_EXCEL, XQ_MAX_TXT)
+        logging.info("  Bridge Excel ready: %s", XQ_EXCEL.name)
 
-    if p["del_arcon"]:
-        _delete_arcon_dirs()
+        if p.get("del_arcon"):
+            _delete_arcon_dirs()
+    else:
+        logging.info("PHASE 1 skipped: χ/Q from %s", XQ_EXCEL)
+
+    if not do_radtrad:
+        logging.info("PHASE 2-4 skipped (ARCON96 only). Bridge Excel: %s", XQ_EXCEL)
+        return 0
 
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     # PHASE 2 — RADTRAD
@@ -1528,7 +1573,7 @@ def main():
     out_root.mkdir(parents=True, exist_ok=True)
     template_lines = _read_template(template_path)
     logging.info("PSF plant power level set to %.1f MWth (inventory .nif in Ci/MWth)", PLANT_POWER_MWTH)
-    defaults = SCRIPT_DIR / "Defaults"
+    defaults = DEFAULTS_DIR
     check_dcf(defaults / support_names[1], defaults / support_names[2])
     # RADTRAD needs the .inp to list the same nuclides as the .nif, in the same order
     nif_inp = defaults / (Path(support_names[1]).stem + "_dcf.inp")
@@ -1622,7 +1667,7 @@ def main():
     logging.info("=" * 62)
     try:
         from zonas_emergencia import generar
-        generar(out_root / "postprocess", *p["ship"])
+        generar(out_root / "postprocess", *p.get("ship", (43.353, -3.086, 300.0)))
     except Exception as e:
         logging.error("Zone map not generated: %s", e)
 

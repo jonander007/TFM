@@ -3,6 +3,9 @@ Carpeta de ejecución
 ====================================================================================
 
 QUÉ HAY
+  RADTRAD_GUI.py, RADTRAD_ENGINE.py, LANZAR_RADTRAD.bat   Interfaz gráfica y su motor (usa PIPELINE.py).
+  INPUT\                 Datos de entrada de la interfaz (MET, NIF, RFT, INP, PSF).
+  preparar_met.py        Revisa y escribe los MET en las columnas que lee ARCON96.
   PIPELINE.py            Cadena completa: ARCON96 -> χ/Q -> RADTRAD -> dosis -> radios -> mapa.
   zonas_emergencia.py    Radios del EAB (250 mSv, peores 2 h) y la LPZ (250 mSv, 30 d) y mapa.
   visor_zonas.html       Plantilla del mapa (Leaflet). El resultado se escribe en psf_batch\postprocess.
@@ -23,7 +26,21 @@ REQUISITOS
       C:\RADTRAD\RADTRAD3.03x\Distribution0203\BatchModeVersion\radtrad.exe
   * Python 3.10 o posterior (python.org, marcando "Add python to PATH").
 
-CÓMO EJECUTAR
+CÓMO EJECUTAR CON LA INTERFAZ GRÁFICA (recomendado)
+  1. Doble clic en LANZAR_RADTRAD.bat (abre RADTRAD_GUI.py).
+  2. Los datos ya están en INPUT\: MET01-05 (INPUT\MET), inventario con tritio (INPUT\NIF),
+     kpfhr_directo.rft (INPUT\RFT), factores de dosis con H-3 (INPUT\INP) y la plantilla
+     template_kpfhr.psf (INPUT\PSF). Comprueba las rutas de arcon96f.exe y radtrad.exe.
+  3. Ajusta distancias, número de MET (5) y juegos de yodo, y pulsa EJECUTAR PIPELINE.
+     Con los interruptores se puede lanzar solo ARCON96, o solo RADTRAD con el χ/Q de una
+     ejecución anterior. Los MET también pueden venir de la plantilla Excel (una hoja por año).
+  4. Cada ejecución crea RUN_N\: INPUT_USED (copia de los datos), WORK (casos de ARCON96 y
+     RADTRAD) y OUTPUT (χ/Q, Sets_Worst2h.xlsx, zonas_emergencia.json, mapa y pipeline.log).
+  5. VER_MAPA.bat abre el mapa más reciente sobre OpenStreetMap.
+  La pestaña «Generador PSF» crea plantillas nuevas: pide volúmenes en m³, caudales en m³/s y
+  fugas en 1/s, y los escribe en las unidades de RADTRAD (ft³, cfm, %/día).
+
+CÓMO EJECUTAR POR CONSOLA (sin interfaz)
   1. Copia esta carpeta a una ruta sin espacios ni acentos (por ejemplo C:\TFM_ejecucion).
   2. Doble clic en EJECUTAR.bat (instala pandas, numpy, openpyxl y matplotlib y lanza el pipeline).
      O bien, desde una consola en esta carpeta:  python PIPELINE.py

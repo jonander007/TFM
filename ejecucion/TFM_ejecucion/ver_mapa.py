@@ -8,7 +8,8 @@ browser does not do for a file opened from disk (file://): the tiles come back a
 "Access blocked". This script serves the results folder on http://localhost and opens the
 map in the browser, so OpenStreetMap works. Close the window (or Ctrl+C) to stop it.
 
-Usage: python ver_mapa.py [folder with mapa_zonas.html]   (default: psf_batch/postprocess)
+Usage: python ver_mapa.py [folder with mapa_zonas.html]
+       (default: the newest of RUN_N/OUTPUT and psf_batch/postprocess)
 """
 import functools, http.server, socketserver, sys, threading, webbrowser
 from pathlib import Path
@@ -17,7 +18,11 @@ HERE = Path(__file__).resolve().parent
 
 
 def main():
-    folder = Path(sys.argv[1]) if len(sys.argv) > 1 else HERE / "psf_batch" / "postprocess"
+    if len(sys.argv) > 1:
+        folder = Path(sys.argv[1])
+    else:   # newest map: RUN_N/OUTPUT (graphical interface) or psf_batch/postprocess (console)
+        maps = list(HERE.glob("RUN_*/OUTPUT/mapa_zonas.html")) + list(HERE.glob("psf_batch/postprocess/mapa_zonas.html"))
+        folder = max(maps, key=lambda f: f.stat().st_mtime).parent if maps else HERE / "psf_batch" / "postprocess"
     page = folder / "mapa_zonas.html"
     if not page.exists():
         sys.exit(f"Not found: {page}. Run PIPELINE.py (or zonas_emergencia.py) first.")

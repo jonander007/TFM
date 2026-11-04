@@ -75,7 +75,46 @@ def interpolate(a, b, f):
 
 
 def process(n, interp, outdir=HERE):
-    recs = read(SRC / f"MET{n:02d}.MET")
+    return prepare_records(read(SRC / f"MET{n:02d}.MET"), outdir / f"MET{n:02d}.MET", interp,
+                           extra_notes=["año con 2 cifras"] if n == 1 else [])
+
+
+def prepare_file(src, out, interp=True):
+    """Repair one MET file (any of the layouts seen so far) and write it in ARCON96's columns."""
+    return prepare_records(read(Path(src)), Path(out), interp)
+
+
+def from_excel(xlsx, out_dir, interp=True):
+    """MET files from the MET_template.xlsx workbook (one sheet per year: Año, Dia, Hora,
+    Dir_10m, Vel_10m [m/s], Dir_60m, Vel_60m, Estab). Sheets without data are skipped.
+    Returns the list of summaries, one per file written (MET01, MET02… in sheet order)."""
+    from openpyxl import load_workbook
+    wb = load_workbook(xlsx, read_only=True, data_only=True)
+    Path(out_dir).mkdir(parents=True, exist_ok=True)
+    out = []
+    for ws in wb.worksheets:
+        rows = list(ws.iter_rows(values_only=True))
+        head = next((i for i, r in enumerate(rows) if r and "Dir_10m" in [str(c).strip() for c in r if c]), None)
+        if head is None:
+            continue
+        cols = {str(c).strip(): k for k, c in enumerate(rows[head]) if c}
+        recs = []
+        for r in rows[head + 1:]:
+            try:
+                vals = [r[cols[c]] for c in ("Dir_10m", "Vel_10m", "Estab", "Dir_60m", "Vel_60m")]
+                if any(v is None or v == "" for v in vals):
+                    continue
+                d1, v1, st, d2, v2 = (float(v) for v in vals)
+                recs.append([ws.title.strip().upper()[:5], int(r[cols["Año"]]), int(r[cols["Dia"]]), int(r[cols["Hora"]]),
+                             (int(round(d1)), int(round(v1 * 10)), int(round(st)), int(round(d2)), int(round(v2 * 10)))])
+            except (KeyError, TypeError, ValueError):
+                continue
+        if recs:
+            out.append(prepare_records(recs, Path(out_dir) / f"MET{len(out) + 1:02d}.MET", interp))
+    return out
+
+
+def prepare_records(recs, out, interp, extra_notes=()):
     sid, year = recs[0][0], recs[0][1]
     notes = fix_sequence(recs)
     north = sum((r[4][0] == 0) + (r[4][3] == 0) for r in recs)
@@ -98,7 +137,6 @@ def process(n, interp, outdir=HERE):
             if lo is not None and hi is not None and hi - lo - 1 <= 12:
                 val = interpolate(data[hours[lo]], data[hours[hi]], (i - lo) / (hi - lo))
         filled[k] = val
-    out = outdir / f"MET{n:02d}.MET"
     with out.open("w", encoding="latin-1", newline="\r\n") as f:
         for d, h in hours:
             v = filled[(d, h)]
@@ -110,7 +148,7 @@ def process(n, interp, outdir=HERE):
                    calmas_pct=round(100 * sum(v[1] < CALM for v in valid) / len(valid), 2),
                    **{f"clase_{'ABCDEFG'[c - 1]}_pct": round(100 * st[c] / len(valid), 1) for c in range(1, 8)},
                    velocidad_media_10m=round(sum(v[1] for v in valid) / len(valid) / 10, 2),
-                   correcciones="; ".join(notes + ([f"año con 2 cifras"] if n == 1 else [])))
+                   correcciones="; ".join(notes + list(extra_notes)))
     return summary
 
 

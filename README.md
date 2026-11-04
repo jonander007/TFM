@@ -17,6 +17,10 @@ El trabajo define las zonas de emergencia (EAB y LPZ) alrededor de un metanero c
 | `datos/arcon/` | Hoja puente de χ/Q de un cálculo anterior y plantilla de datos meteorológicos. |
 | `referencias/` | Documentos de referencia: metodología de término fuente de Kairos Power (KP-TR-012, revisiones), concentraciones de equilibrio del núcleo, criterios de diseño FHR de ORNL y el TFM de referencia sobre selección de SMR. |
 
+## Interfaz gráfica
+
+`herramienta/RADTRAD_GUI.py` (con `RADTRAD_ENGINE.py`) es la interfaz de escritorio. Lanza el mismo cálculo que `PIPELINE.py` con las carpetas `INPUT/` (datos) y `RUN_N/` (resultados), y tiene un generador de plantillas `.psf` que escribe con las columnas y unidades de RADTRAD. La carpeta `ejecucion/TFM_ejecucion/` la trae lista: `LANZAR_RADTRAD.bat`.
+
 ## Ejecutar la herramienta
 
 Requiere Windows con ARCON96 y RADTRAD instalados, Python 3.10 o posterior y `pip install pandas numpy openpyxl matplotlib` (matplotlib es opcional; solo se usa para la imagen PNG del mapa). `herramienta/Defaults/` ya incluye `fgr11&12.inp` completado con el H-3 (`completar_inp.py`; el original está en `fgr11&12_original.inp`).
