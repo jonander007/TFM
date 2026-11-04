@@ -209,3 +209,18 @@ Originales en `datos/arcon/met_original/`; `herramienta/preparar_met.py` genera 
     - tablas de la matriz de criterios, pesos, intensidades de las escalas, calificaciones y puntuación;
     - figura con el reparto de la puntuación de cada candidato.
   - **Pendiente:** cargar `TFM_KP-FHR_final_v2.smt` (el mismo modelo, renombrado para no confundirlo con la versión anterior) en SMART y regenerar su informe para que coincida.
+- **Capítulo 5, descripción técnica del KP-FHR (04/11), revisado frente a KP-TR-012, en las dos versiones.**
+  - **5.2.5:** contención funcional (no hay contención estanca de tipo LWR), con las mismas barreras que el término fuente del capítulo 9.
+  - **5.2.4:**
+    - el FLiBe retiene los productos de fisión; antes decía que su interacción era «limitada»;
+    - el tritio se produce en el FLiBe y se difunde al circuito intermedio.
+  - **5.2.2:** los dos sistemas de evacuación del calor residual permiten la parada segura sin alimentación eléctrica, que es la función que pone a prueba el accidente postulado.
+  - **5.2.3:** «no se postula una fusión del núcleo como en los LWR», en lugar de «se elimina el concepto de core melt».
+  - **5.3.2:** circuito intermedio de nitratos y ciclo de vapor, compatible con la turbina de vapor del buque.
+  - **5.3.3:** la recarga en línea es continua; antes se decía que se reducían las recargas. Además, las escalas prohíben las operaciones con combustible en puerto.
+  - **Tabla 6:**
+    - espectro neutrónico (antes «Tipo de reactor» aparecía repetido);
+    - HALEU, porque «LEU+» se refiere al 5–10 %;
+    - esferas (pebbles), recarga en línea, parada sin alimentación eléctrica, dos sistemas de evacuación del calor residual y contención funcional.
+  - **Citas de 5.2 y 5.2.4:** colocadas antes de los dos puntos.
+  - **Pendiente de fuente:** 140 MWe, grafito IBIDEN ET-10, acero 316H y barras de control con SCRAM.
