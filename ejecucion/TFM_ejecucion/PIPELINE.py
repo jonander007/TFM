@@ -1569,105 +1569,134 @@ def run(p):
     logging.info("PHASE 2  —  RADTRAD  (%d sets × %d distances)", nsets, len(distances))
     logging.info("=" * 62)
 
+    # Scenarios (memoria, chapter 8): E1 with the .nif chosen (activity outside the reactor building);
+    # E2, building not credited, when "<nif>_E2.nif" is next to it in Defaults (generar_nif.py --escenario E2).
+    # E1 keeps the usual output folder; E2 goes to <out_root>/E2. Both use the same iodine fraction sets.
     _manage_out_root(out_root, p["out_action"])
-    out_root.mkdir(parents=True, exist_ok=True)
-    template_lines = _read_template(template_path)
-    logging.info("PSF plant power level set to %.1f MWth (inventory .nif in Ci/MWth)", PLANT_POWER_MWTH)
-    defaults = DEFAULTS_DIR
-    check_dcf(defaults / support_names[1], defaults / support_names[2])
-    # RADTRAD needs the .inp to list the same nuclides as the .nif, in the same order
-    nif_inp = defaults / (Path(support_names[1]).stem + "_dcf.inp")
-    inp_for_nif(defaults / support_names[2], defaults / support_names[1], nif_inp)
-    support_names = (support_names[0], support_names[1], nif_inp.name)
-    logging.info("Dose factors for RADTRAD: %s (same nuclides and order as %s)", nif_inp.name, support_names[1])
-    xq_table = load_xq_table(XQ_EXCEL, EXPECTED_TIMES)
-    acc_csv = out_root / "postprocess" / "post_timeseries_accum.csv"
-    runs_index: List[Dict] = []
-    jobs: List[Tuple[int, int, Path]] = []
-
-    random.seed(None); np.random.seed(None)
-
-    for k in range(1, nsets + 1):
-        if fixed_sets[k-1] is not None:
-            f1, f2, f3 = fixed_sets[k-1]; src_lbl = "fixed"
-        else:
-            f1, f2, f3 = np.random.dirichlet([1, 1, 1]); src_lbl = "random"
-        logging.info("  [SET %02d] %s  AER=%.4f  I2=%.4f  CH3I=%.4f", k, src_lbl, f1, f2, f3)
-
-        set_dir = out_root / f"frac_set_{k:02d}"; set_dir.mkdir(parents=True, exist_ok=True)
-        (set_dir / "set_meta.json").write_text(json.dumps({
-            "set_id":k, "frac_AER":f1, "frac_I2":f2, "frac_CH3I":f3, "source":src_lbl,
-            "frac_AER (Aerosoles)":f1, "frac_I2 (Elemental)":f2, "frac_CH3I (Organico)":f3,
-        }, indent=2), encoding="utf-8")
-
-        for d in distances:
-            dist_dir = set_dir / f"{d}_m"; dist_dir.mkdir(exist_ok=True)
-            _copy_defaults(dist_dir)
-            try:
-                psf_bytes = build_psf(template_lines, d, (f1, f2, f3), xq_table, support_names)
-            except Exception as e:
-                logging.error("  PSF build failed set=%d d=%d: %s", k, d, e); continue
-
-            psf_path = dist_dir / f"Test16_{d}m.psf"
-            psf_path.write_bytes(psf_bytes)
-            logging.info("    PSF: %s", psf_path.name)
-            jobs.append((k, d, psf_path))
-
-    def _radtrad_job(psf_path):
-        rc = run_radtrad(psf_path, radtrad_exe)
-        if rc == 0: logging.info("    RADTRAD OK  → %s", psf_path.parent.parent.name + "/" + psf_path.stem)
-        else:       logging.error("    RADTRAD rc=%d → %s", rc, psf_path.parent.parent.name + "/" + psf_path.stem)
-        return rc
-
-    if no_run:
-        rcs = [None] * len(jobs)
+    support_base = tuple(support_names)
+    nif_e2 = Path(support_base[1]).stem + "_E2.nif"
+    scenarios = [("E1", support_base[1], out_root)]
+    if p.get("escenario_e2", True) and (DEFAULTS_DIR / nif_e2).exists():
+        scenarios.append(("E2", nif_e2, out_root / "E2"))
     else:
-        logging.info("  Running RADTRAD  (%d cases, %d workers)", len(jobs), workers)
-        rcs = _run_parallel(_radtrad_job, [j[2] for j in jobs], workers)
+        logging.info("E2 not run: %s not found in %s (generar_nif.py --escenario E2)", nif_e2, DEFAULTS_DIR)
+    random.seed(None); np.random.seed(None)
+    drawn: Dict[int, Tuple] = {}
 
-    for (k, d, psf_path), rc in zip(jobs, rcs):
-        if rc == 0 or no_run:
-            o0 = psf_path.with_suffix(".o0")
-            if o0.exists():
-                text = o0.read_text(encoding="cp1252", errors="ignore")
-                df_case = parse_cumulative(text)
-                if not df_case.empty:
-                    df_case["distance_m"] = d; df_case["set_id"] = k
-                    df_case["TEDE_uSv"]    = df_case["TEDE_rem"]    * FACTOR_USV
-                    df_case["Thyroid_uSv"] = df_case["Thyroid_rem"] * FACTOR_USV
-                    acc_csv.parent.mkdir(parents=True, exist_ok=True)
-                    hdr = not acc_csv.exists()
-                    with acc_csv.open("a", newline="", encoding="utf-8") as ff:
-                        df_case.to_csv(ff, header=hdr, index=False, lineterminator="\r\n")
+    def radtrad_scenario(label, nif_name, out_root):
+        support_names = (support_base[0], nif_name, support_base[2])
+        logging.info("-" * 62)
+        logging.info("Scenario %s: inventory %s → %s", label, nif_name, out_root)
+        if label != "E1":
+            shutil.rmtree(out_root, ignore_errors=True)
+        out_root.mkdir(parents=True, exist_ok=True)
+        template_lines = _read_template(template_path)
+        logging.info("PSF plant power level set to %.1f MWth (inventory .nif in Ci/MWth)", PLANT_POWER_MWTH)
+        defaults = DEFAULTS_DIR
+        check_dcf(defaults / support_names[1], defaults / support_names[2])
+        # RADTRAD needs the .inp to list the same nuclides as the .nif, in the same order
+        nif_inp = defaults / (Path(support_names[1]).stem + "_dcf.inp")
+        inp_for_nif(defaults / support_names[2], defaults / support_names[1], nif_inp)
+        support_names = (support_names[0], support_names[1], nif_inp.name)
+        logging.info("Dose factors for RADTRAD: %s (same nuclides and order as %s)", nif_inp.name, support_names[1])
+        xq_table = load_xq_table(XQ_EXCEL, EXPECTED_TIMES)
+        acc_csv = out_root / "postprocess" / "post_timeseries_accum.csv"
+        runs_index: List[Dict] = []
+        jobs: List[Tuple[int, int, Path]] = []
 
-        runs_index.append({
-            "distance_m": d, "set_id": k,
-            "psf_path": str(psf_path),
-            "o0_path":  str(psf_path.with_suffix(".o0")),
-            "rc": rc if rc is not None else (-1 if no_run else None),
-        })
 
-    logging.info("PHASE 2 complete%s.", " (PSFs only)" if no_run else "")
+        for k in range(1, nsets + 1):
+            if k in drawn:                      # same iodine fraction sets for every scenario
+                (f1, f2, f3), src_lbl = drawn[k]
+            elif fixed_sets[k-1] is not None:
+                f1, f2, f3 = fixed_sets[k-1]; src_lbl = "fixed"
+            else:
+                f1, f2, f3 = np.random.dirichlet([1, 1, 1]); src_lbl = "random"
+            drawn[k] = ((f1, f2, f3), src_lbl)
+            logging.info("  [SET %02d] %s  AER=%.4f  I2=%.4f  CH3I=%.4f", k, src_lbl, f1, f2, f3)
 
-    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    # PHASE 3 — POST-PROCESS
-    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    logging.info("=" * 62)
-    logging.info("PHASE 3  —  Post-processing → Sets_Worst2h.xlsx")
-    logging.info("=" * 62)
+            set_dir = out_root / f"frac_set_{k:02d}"; set_dir.mkdir(parents=True, exist_ok=True)
+            (set_dir / "set_meta.json").write_text(json.dumps({
+                "set_id":k, "frac_AER":f1, "frac_I2":f2, "frac_CH3I":f3, "source":src_lbl,
+                "frac_AER (Aerosoles)":f1, "frac_I2 (Elemental)":f2, "frac_CH3I (Organico)":f3,
+            }, indent=2), encoding="utf-8")
 
-    worst2h_out = out_root / "postprocess" / "Sets_Worst2h.xlsx"
-    write_sets_worst2h(worst2h_out, runs_index)
+            for d in distances:
+                dist_dir = set_dir / f"{d}_m"; dist_dir.mkdir(exist_ok=True)
+                _copy_defaults(dist_dir)
+                try:
+                    psf_bytes = build_psf(template_lines, d, (f1, f2, f3), xq_table, support_names)
+                except Exception as e:
+                    logging.error("  PSF build failed set=%d d=%d: %s", k, d, e); continue
+
+                psf_path = dist_dir / f"Test16_{d}m.psf"
+                psf_path.write_bytes(psf_bytes)
+                logging.info("    PSF: %s", psf_path.name)
+                jobs.append((k, d, psf_path))
+
+        def _radtrad_job(psf_path):
+            rc = run_radtrad(psf_path, radtrad_exe)
+            if rc == 0: logging.info("    RADTRAD OK  → %s", psf_path.parent.parent.name + "/" + psf_path.stem)
+            else:       logging.error("    RADTRAD rc=%d → %s", rc, psf_path.parent.parent.name + "/" + psf_path.stem)
+            return rc
+
+        if no_run:
+            rcs = [None] * len(jobs)
+        else:
+            logging.info("  Running RADTRAD  (%d cases, %d workers)", len(jobs), workers)
+            rcs = _run_parallel(_radtrad_job, [j[2] for j in jobs], workers)
+
+        for (k, d, psf_path), rc in zip(jobs, rcs):
+            if rc == 0 or no_run:
+                o0 = psf_path.with_suffix(".o0")
+                if o0.exists():
+                    text = o0.read_text(encoding="cp1252", errors="ignore")
+                    df_case = parse_cumulative(text)
+                    if not df_case.empty:
+                        df_case["distance_m"] = d; df_case["set_id"] = k
+                        df_case["TEDE_uSv"]    = df_case["TEDE_rem"]    * FACTOR_USV
+                        df_case["Thyroid_uSv"] = df_case["Thyroid_rem"] * FACTOR_USV
+                        acc_csv.parent.mkdir(parents=True, exist_ok=True)
+                        hdr = not acc_csv.exists()
+                        with acc_csv.open("a", newline="", encoding="utf-8") as ff:
+                            df_case.to_csv(ff, header=hdr, index=False, lineterminator="\r\n")
+
+            runs_index.append({
+                "distance_m": d, "set_id": k,
+                "psf_path": str(psf_path),
+                "o0_path":  str(psf_path.with_suffix(".o0")),
+                "rc": rc if rc is not None else (-1 if no_run else None),
+            })
+
+        logging.info("PHASE 2 complete%s.", " (PSFs only)" if no_run else "")
+
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        # PHASE 3 — POST-PROCESS
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        logging.info("=" * 62)
+        logging.info("PHASE 3  —  Post-processing → Sets_Worst2h.xlsx")
+        logging.info("=" * 62)
+
+        worst2h_out = out_root / "postprocess" / "Sets_Worst2h.xlsx"
+        write_sets_worst2h(worst2h_out, runs_index)
+        return worst2h_out
+
+    worst2h_by = {}
+    for label, nif_name, root in scenarios:
+        worst2h_by[label] = radtrad_scenario(label, nif_name, root)
+    worst2h_out = worst2h_by["E1"]
 
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     # PHASE 4 — EAB / LPZ RADII AND MAP
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     logging.info("=" * 62)
-    logging.info("PHASE 4  —  EAB / LPZ radii → mapa_zonas.html")
+    logging.info("PHASE 4  —  Emergency zones (E1 and E2) → mapa_zonas.html")
     logging.info("=" * 62)
     try:
         from zonas_emergencia import generar
-        generar(out_root / "postprocess", *p.get("ship", (43.353, -3.086, 300.0)))
+        e2_post = out_root / "E2" / "postprocess"
+        generar(out_root / "postprocess", *p.get("ship", (43.353, -3.086, 300.0)),
+                e2=e2_post if "E2" in worst2h_by and e2_post.exists() else None)
     except Exception as e:
         logging.error("Zone map not generated: %s", e)
 

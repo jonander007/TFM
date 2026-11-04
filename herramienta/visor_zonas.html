@@ -653,13 +653,19 @@ button:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 .leaflet-control-layers label { display: flex; align-items: center; gap: 6px; margin: 2px 0; }
 .leaflet-control-layers-selector { display: inline-block; width: auto; margin: 0; }
+[hidden] { display: none !important; }
+.lims { display: grid; gap: 6px; }
+.limrow { display: grid; grid-template-columns: auto auto 1fr 80px; align-items: center; gap: 6px; font-size: 12px; }
+.limrow input[type=checkbox] { width: auto; margin: 0; }
+.limrow input[type=number] { margin: 0; }
+.limrow .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 </style>
 
 <div class="app">
   <aside class="panel">
     <header>
       <h1>Zonas de emergencia del buque</h1>
-      <div class="sub">EAB y LPZ a partir de los resultados de ARCON96 + RADTRAD</div>
+      <div class="sub">Zonas de la Tabla 4 (escenarios E1 y E2) a partir de ARCON96 + RADTRAD</div>
       <div id="demo" class="tag" style="margin-top:8px" hidden>Datos de ejemplo sintéticos</div>
     </header>
 
@@ -686,12 +692,9 @@ button:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
     </section>
 
     <section>
-      <h2>Criterios de dosis (TEDE)</h2>
-      <div class="grid2">
-        <label for="limEAB">EAB, peores 2 h (mSv)<input id="limEAB" type="number" min="0.1" step="10"></label>
-        <label for="limLPZ">LPZ, 30 días (mSv)<input id="limLPZ" type="number" min="0.1" step="10"></label>
-      </div>
-      <p class="hint">Por defecto, 250 mSv (25 rem): 10 CFR 50.34 y RG 1.183.</p>
+      <h2>Criterios de dosis</h2>
+      <div id="lims" class="lims"></div>
+      <p class="hint">EAB y LPZ: 250 mSv (10 CFR 50.34 y RG 1.183). Medidas urgentes: Directriz Básica (RD 1564/2010). Marca las zonas que quieras ver en el mapa.</p>
     </section>
 
     <section class="chart">
@@ -719,11 +722,34 @@ button:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
 <script>
 const EMBEDDED = /*DATOS*/null/*FIN*/;
 const DEFAULT = { lat: 43.3530, lon: -3.0860, rumbo: 300 };
-const S = { data: null, lat: DEFAULT.lat, lon: DEFAULT.lon, rumbo: DEFAULT.rumbo, lim: { EAB: 250, LPZ: 250 }, mode: "map" };
-const ZMETA = {
-  EAB: { name: "EAB", long: "Límite del área de exclusión", periodo: "peores 2 h", color: () => css("--eab") },
-  LPZ: { name: "LPZ", long: "Zona de baja población", periodo: "30 días", color: () => css("--lpz") },
+const S = { data: null, lat: DEFAULT.lat, lon: DEFAULT.lon, rumbo: DEFAULT.rumbo, lim: {}, show: {}, mode: "map" };
+// Zone metadata: from zonas_emergencia.json (Table 4 of the memoria); EAB/LPZ fallback for older files.
+const ZDEF = {
+  EAB: { nombre: "Límite del área de exclusión (EAB)", periodo: "peores 2 h", limite_msv: 250, magnitud: "TEDE", escenarios: "E1", color: "#c0392b" },
+  LPZ: { nombre: "Zona de baja población (LPZ)", periodo: "30 días", limite_msv: 250, magnitud: "TEDE", escenarios: "E1", color: "#e67e22" },
 };
+const ZMETA = {};
+function buildMeta(data) {
+  Object.keys(ZMETA).forEach(k => delete ZMETA[k]);
+  const zs = (data.zonas && data.zonas.length) ? data.zonas : Object.entries(ZDEF).map(([k, v]) => ({ clave: k, ...v }));
+  zs.forEach(z => {
+    if (!(data.envolventes || {})[z.clave]) return;
+    const col = z.clave === "EAB" ? () => css("--eab") : z.clave === "LPZ" ? () => css("--lpz") : () => z.color;
+    ZMETA[z.clave] = { name: z.clave, long: z.nombre, periodo: z.periodo, magnitud: z.magnitud || "TEDE",
+                       escenarios: z.escenarios || "E1", color: col };
+    if (!(z.clave in S.lim)) S.lim[z.clave] = z.limite_msv;
+    if (!(z.clave in S.show)) S.show[z.clave] = ["EAB", "LPZ", "EVAC", "CONF", "PLAN"].includes(z.clave);
+  });
+  $("lims").innerHTML = Object.entries(ZMETA).map(([k, m]) =>
+    `<div class="limrow"><input type="checkbox" id="sh_${k}" ${S.show[k] ? "checked" : ""} aria-label="Mostrar ${k}">
+     <span class="dot" style="background:${m.color()}"></span>
+     <label for="lim_${k}">${k} · ${m.magnitud}, ${m.periodo}, ${m.escenarios} (mSv)</label>
+     <input id="lim_${k}" type="number" min="0.1" step="1" value="${S.lim[k]}"></div>`).join("");
+  Object.keys(ZMETA).forEach(k => {
+    $("lim_" + k).addEventListener("input", e => { const v = +e.target.value; if (v > 0) { S.lim[k] = v; render(); } });
+    $("sh_" + k).addEventListener("change", e => { S.show[k] = e.target.checked; render(); });
+  });
+}
 const $ = id => document.getElementById(id);
 function css(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
 const fmt = (x, d = 0) => x.toLocaleString("es-ES", { maximumFractionDigits: d, minimumFractionDigits: d });
@@ -743,7 +769,7 @@ function radio(env, L) {
 }
 
 function zonas() {
-  return ["EAB", "LPZ"].map(k => {
+  return Object.keys(ZMETA).filter(k => S.show[k]).map(k => {
     const env = [...(S.data.envolventes[k] || [])].sort((a, b) => a.distance_m - b.distance_m);
     return { key: k, env, ...radio(env, S.lim[k]) };
   });
@@ -758,7 +784,7 @@ function renderPanel(zs) {
     else if (z.estado === "menor_que_minimo") { val = `≤ ${fmt(z.r)}<small> m</small>`; st = "No se supera el criterio en ninguna distancia calculada."; }
     else { val = `${fmt(z.r)}<small> m</small>`; st = `Juego de fracciones más desfavorable: ${z.set}`; }
     return `<div class="zone"><div class="bar" style="background:${m.color()}"></div>
-      <div><div class="name">${m.name}</div><div class="crit">${m.long} · ${fmt(S.lim[z.key], 0)} mSv, ${m.periodo}</div></div>
+      <div><div class="name">${m.name}</div><div class="crit">${m.long} · ${m.magnitud} ${fmt(S.lim[z.key], 0)} mSv, ${m.periodo} · ${m.escenarios}</div></div>
       <div class="r">${val}</div><div class="st">${st}</div></div>`;
   }).join("");
 }
@@ -781,7 +807,7 @@ function renderChart(zs) {
   for (let x = Math.ceil(x0 / step) * step; x <= x1; x += step)
     g += `<text x="${X(x)}" y="${H - mb + 14}" text-anchor="middle">${fmt(x)}</text>`;
   g += `<text x="${(ml + W - mr) / 2}" y="${H - 3}" text-anchor="middle">distancia (m)</text>`;
-  g += `<text x="10" y="${(mt + H - mb) / 2}" text-anchor="middle" transform="rotate(-90 10 ${(mt + H - mb) / 2})">TEDE (mSv)</text>`;
+  g += `<text x="10" y="${(mt + H - mb) / 2}" text-anchor="middle" transform="rotate(-90 10 ${(mt + H - mb) / 2})">dosis (mSv)</text>`;
   zs.forEach(z => {
     const c = ZMETA[z.key].color();
     g += `<line x1="${ml}" x2="${W - mr}" y1="${Y(S.lim[z.key])}" y2="${Y(S.lim[z.key])}" stroke="${c}" stroke-dasharray="4 3" stroke-width="1"/>`;
@@ -875,23 +901,23 @@ function drawEsquema(zs) {
 
 // --------------------------------------------------------------- control
 function setShip(lat, lon) { S.lat = +lat; S.lon = +lon; syncInputs(); render(); if (map) map.panTo([S.lat, S.lon]); }
-function syncInputs() { $("lat").value = S.lat.toFixed(4); $("lon").value = S.lon.toFixed(4); $("rumbo").value = S.rumbo; $("limEAB").value = S.lim.EAB; $("limLPZ").value = S.lim.LPZ; }
+function syncInputs() { $("lat").value = S.lat.toFixed(4); $("lon").value = S.lon.toFixed(4); $("rumbo").value = S.rumbo; }
 function render() { if (!S.data) return; const zs = zonas(); renderPanel(zs); renderChart(zs); drawMap(zs); }
 let fitted = false;
 function load(data, label, demo) {
-  S.data = data;
+  S.data = data; S.lim = {}; S.show = {}; buildMeta(data);
   if (typeof data.lat === "number") { S.lat = data.lat; S.lon = data.lon; }
   if (typeof data.rumbo === "number") S.rumbo = data.rumbo;
   $("demo").hidden = !demo;
-  $("src").textContent = label + (data.n_sets ? ` · ${data.n_sets} juegos de fracciones` : "");
+  $("src").textContent = label + (data.n_sets ? ` · ${data.n_sets} juegos de fracciones` : "")
+    + (data.escenarios ? ` · escenarios ${data.escenarios.join(" y ")}` : "")
+    + ((data.avisos || []).length ? ` · ${data.avisos.join("; ")}` : "");
   syncInputs(); render();
   if (map) { const c = Object.values(circles); if (c.length) map.fitBounds(L.featureGroup(c).getBounds().pad(0.3)); }
 }
 
 ["lat", "lon"].forEach(id => $(id).addEventListener("change", () => setShip($("lat").value, $("lon").value)));
 $("rumbo").addEventListener("input", () => { S.rumbo = ((+$("rumbo").value % 360) + 360) % 360; render(); });
-$("limEAB").addEventListener("input", () => { const v = +$("limEAB").value; if (v > 0) { S.lim.EAB = v; render(); } });
-$("limLPZ").addEventListener("input", () => { const v = +$("limLPZ").value; if (v > 0) { S.lim.LPZ = v; render(); } });
 $("atraque").addEventListener("change", () => { const v = $("atraque").value; if (v) { const [a, b] = v.split(",").map(Number); setShip(a, b); } });
 $("file").addEventListener("change", () => {
   const f = $("file").files[0]; if (!f) return;

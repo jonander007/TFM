@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-zonas_emergencia.py  —  EAB / LPZ radii and map from the PIPELINE.py results
+zonas_emergencia.py  —  emergency zone radii and map from the PIPELINE.py results
 ============================================================================
 
 Reads the RADTRAD post-processing written by PIPELINE.py
   <out_root>/postprocess/Sets_Worst2h.xlsx          (worst 2-h TEDE at the EAB)
   <out_root>/postprocess/post_timeseries_accum.csv  (cumulative TEDE per receptor)
-and, for every distance, takes the most unfavourable value over all the iodine
-fraction sets (envelope). Each zone radius is the smallest distance beyond which
+for scenario E1 and, if run, scenario E2 (<out_root>/E2/postprocess), and evaluates the
+zones of Table 4 of the memoria: EAB and LPZ (250 mSv TEDE, E1), evacuation (50 mSv,
+7 d, E2), sheltering (10 mSv, 48 h), iodine prophylaxis (100 mSv thyroid, 7 d) and
+planning zone (10 mSv, 96 h), envelope of E1 and E2, and deterministic effects (E2).
+For every distance it takes the most unfavourable value over all the iodine fraction
+sets (envelope). Each zone radius is the smallest distance beyond which
 the envelope dose never exceeds the criterion; it is refined by log-linear
 interpolation between the last distance that exceeds it and the next one.
 
@@ -47,12 +51,24 @@ class Criterio:
     limite_msv: float
     periodo: str
     color: str
+    magnitud: str = "TEDE"          # "TEDE" or "Tiroides" (thyroid equivalent dose)
+    horas: Optional[float] = None   # integration time of the cumulative dose (None: worst 2 h)
+    escenarios: str = "E1"          # "E1", "E2" or "E1+E2" (envelope of both)
 
 
-# Siting criteria (10 CFR 50.34(a)(1)(ii)(D) / RG 1.183): 250 mSv TEDE
+# Table 4 of the memoria (chapter 3): siting check (10 CFR 50.34 / RG 1.183, 250 mSv TEDE) and
+# urgent protective action zones of the Directriz Básica (RD 1564/2010). Deterministic effects
+# (1 Gy red marrow, 5 Gy thyroid in 48 h) are checked with the TEDE and the thyroid dose, which
+# RADTRAD computes, as proxies of the absorbed doses.
 CRITERIOS = {
-    "EAB": Criterio("EAB", "Límite del área de exclusión (EAB)", 250.0, "peores 2 h", "#c0392b"),
-    "LPZ": Criterio("LPZ", "Zona de baja población (LPZ)", 250.0, "duración de la emisión (30 d)", "#e67e22"),
+    "EAB": Criterio("EAB", "Límite del área de exclusión (EAB)", 250.0, "peores 2 h", "#c0392b", "TEDE", None, "E1"),
+    "LPZ": Criterio("LPZ", "Zona de baja población (LPZ)", 250.0, "30 días", "#e67e22", "TEDE", 720.0, "E1"),
+    "EVAC": Criterio("EVAC", "Medidas urgentes: evacuación", 50.0, "7 días", "#8e44ad", "TEDE", 168.0, "E2"),
+    "CONF": Criterio("CONF", "Medidas urgentes: confinamiento", 10.0, "48 h", "#2471a3", "TEDE", 48.0, "E1+E2"),
+    "YODO": Criterio("YODO", "Profilaxis con yodo (tiroides)", 100.0, "7 días", "#16a085", "Tiroides", 168.0, "E1+E2"),
+    "PLAN": Criterio("PLAN", "Zona de planificación de emergencias", 10.0, "96 h", "#7f8c8d", "TEDE", 96.0, "E1+E2"),
+    "DETM": Criterio("DETM", "Efectos deterministas: médula (1 Gy, aprox. con TEDE)", 1000.0, "48 h", "#000000", "TEDE", 48.0, "E2"),
+    "DETT": Criterio("DETT", "Efectos deterministas: tiroides (5 Gy)", 5000.0, "48 h", "#5d4037", "Tiroides", 48.0, "E2"),
 }
 
 
@@ -62,6 +78,8 @@ class Zona:
     nombre: str
     limite_msv: float
     periodo: str
+    magnitud: str
+    escenarios: str
     radio_m: Optional[float]      # None when the criterion is exceeded at every distance
     estado: str                   # "interpolado" | "menor_que_minimo" | "mayor_que_maximo"
     distancia_critica_m: Optional[float]
@@ -88,6 +106,7 @@ def leer_worst2h(xlsx: Path) -> pd.DataFrame:
 def leer_acumulada(csv: Path) -> pd.DataFrame:
     df = pd.read_csv(csv)
     df["dosis_msv"] = df["TEDE_rem"] * REM_TO_MSV
+    df["tiroides_msv"] = df["Thyroid_rem"] * REM_TO_MSV if "Thyroid_rem" in df.columns else np.nan
     return df
 
 
@@ -106,13 +125,16 @@ def worst2h_desde_acumulada(acc: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=["set_id", "distance_m", "dosis_msv"])
 
 
-def lpz_desde_acumulada(acc: pd.DataFrame, horas: float = 720.0) -> pd.DataFrame:
-    """Cumulative LPZ TEDE at the last output time not later than `horas`."""
+def lpz_desde_acumulada(acc: pd.DataFrame, horas: float = 720.0, col: str = "dosis_msv") -> pd.DataFrame:
+    """Cumulative dose of the LPZ receptor at `horas` (linear interpolation between output times;
+    the LPZ and EAB receptors use the same χ/Q table, so either series gives the dose at that distance)."""
     rows = []
     for (sid, d), g in acc[acc["receptor"] == "LPZ"].groupby(["set_id", "distance_m"]):
-        g = g[g["time_h"] <= horas + 1e-9].sort_values("time_h")
-        if not g.empty:
-            rows.append({"set_id": sid, "distance_m": float(d), "dosis_msv": float(g["dosis_msv"].iloc[-1])})
+        g = g.sort_values("time_h")
+        t = np.concatenate(([0.0], g["time_h"].to_numpy(float)))
+        D = np.concatenate(([0.0], g[col].to_numpy(float)))
+        if len(t) > 1:
+            rows.append({"set_id": sid, "distance_m": float(d), "dosis_msv": float(np.interp(min(horas, t[-1]), t, D))})
     return pd.DataFrame(rows, columns=["set_id", "distance_m", "dosis_msv"])
 
 
@@ -130,7 +152,7 @@ def radio(env: pd.DataFrame, crit: Criterio) -> Zona:
     D = env["dosis_msv"].to_numpy(float)
     exceed = np.nonzero(D > crit.limite_msv)[0]
     base = dict(clave=crit.clave, nombre=crit.nombre, limite_msv=crit.limite_msv,
-                periodo=crit.periodo, color=crit.color)
+                periodo=crit.periodo, color=crit.color, magnitud=crit.magnitud, escenarios=crit.escenarios)
     if len(exceed) == 0:
         return Zona(radio_m=float(d[0]), estado="menor_que_minimo", distancia_critica_m=None,
                     set_critico=None, **base)
@@ -148,7 +170,8 @@ def radio(env: pd.DataFrame, crit: Criterio) -> Zona:
                 set_critico=worst, **base)
 
 
-def calcular_zonas(postprocess: Path) -> Dict:
+def _leer_escenario(postprocess: Path):
+    """(worst 2-h EAB doses, cumulative series) of one scenario's postprocess folder."""
     acc_csv = postprocess / "post_timeseries_accum.csv"
     # If Sets_Worst2h.xlsx was open in Excel, PIPELINE.py saved Sets_Worst2h_01.xlsx, _02…:
     # take the newest one, and ignore it if it is older than this run's time series.
@@ -167,13 +190,52 @@ def calcular_zonas(postprocess: Path) -> Dict:
     else:
         raise FileNotFoundError(f"No RADTRAD post-processing found in {postprocess}")
     if acc is None:
-        raise FileNotFoundError(f"{acc_csv} is required for the LPZ")
-    lpz = lpz_desde_acumulada(acc)
+        raise FileNotFoundError(f"{acc_csv} is required for the cumulative doses")
+    return eab, acc
 
-    envs = {"EAB": envolvente(eab), "LPZ": envolvente(lpz)}
-    zonas = [radio(envs[k], CRITERIOS[k]) for k in ("EAB", "LPZ")]
+
+def _dosis(crit: Criterio, datos: Dict) -> pd.DataFrame:
+    """Dose per (set, distance) for a criterion: worst 2 h at the EAB, or the cumulative TEDE or thyroid
+    dose at the criterion's time; with "E1+E2", the most unfavourable of both scenarios."""
+    partes = []
+    for esc in crit.escenarios.split("+"):
+        if esc not in datos:
+            continue
+        eab, acc = datos[esc]
+        if crit.horas is None:
+            df = eab
+        else:
+            col = "tiroides_msv" if crit.magnitud == "Tiroides" else "dosis_msv"
+            df = lpz_desde_acumulada(acc, crit.horas, col)
+        partes.append(df.assign(escenario=esc))
+    if not partes:
+        return pd.DataFrame(columns=["set_id", "distance_m", "dosis_msv", "escenario"])
+    return pd.concat(partes, ignore_index=True)
+
+
+def calcular_zonas(postprocess: Path, e2: Optional[Path] = None) -> Dict:
+    """Zones of Table 4 of the memoria. `postprocess` holds E1; `e2` the E2 postprocess folder, if run.
+    Without E2, the criteria assigned to E2 are evaluated with E1 and flagged."""
+    datos = {"E1": _leer_escenario(postprocess)}
+    if e2 is not None and Path(e2).exists():
+        datos["E2"] = _leer_escenario(Path(e2))
+    zonas, envs, avisos = [], {}, []
+    for k, crit in CRITERIOS.items():
+        c = crit
+        if "E2" in crit.escenarios and "E2" not in datos:
+            c = Criterio(**{**asdict(crit), "escenarios": "E1"})
+            avisos.append(f"{k}: E2 no calculado, se usa E1")
+        df = _dosis(c, datos)
+        if df.empty:
+            continue
+        env = envolvente(df)
+        envs[k] = env
+        zonas.append(radio(env, c))
+    eab1 = datos["E1"][0]
     return {
-        "n_sets": int(eab["set_id"].nunique()),
+        "n_sets": int(eab1["set_id"].nunique()),
+        "escenarios": sorted(datos),
+        "avisos": avisos,
         "zonas": [asdict(z) for z in zonas],
         "envolventes": {k: env[["distance_m", "dosis_msv", "set_id"]].to_dict("records")
                         for k, env in envs.items()},
@@ -246,9 +308,9 @@ def escribir_png(resultado: Dict, png: Path, titulo: str = "Zonas de emergencia 
 
 
 def generar(postprocess: Path, lat: float = DEFAULT_LAT, lon: float = DEFAULT_LON,
-            rumbo: float = DEFAULT_HEADING) -> Dict:
-    """Compute the zones and write zonas_emergencia.json and mapa_zonas.html."""
-    res = calcular_zonas(postprocess)
+            rumbo: float = DEFAULT_HEADING, e2: Optional[Path] = None) -> Dict:
+    """Compute the zones and write zonas_emergencia.json and mapa_zonas.html (in the E1 folder)."""
+    res = calcular_zonas(postprocess, e2)
     res.update(lat=lat, lon=lon, rumbo=rumbo)
     (postprocess / "zonas_emergencia.json").write_text(
         json.dumps(res, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -262,8 +324,11 @@ def generar(postprocess: Path, lat: float = DEFAULT_LAT, lon: float = DEFAULT_LO
             logging.warning("%s: criterion exceeded at the largest distance (%s m) — extend the range",
                             z["clave"], z["distancia_critica_m"])
         else:
-            logging.info("%s radius: %s%.0f m", z["clave"],
-                         "≤ " if z["estado"] == "menor_que_minimo" else "", z["radio_m"])
+            logging.info("%-4s %-55s %s%.0f m  (%s %g mSv, %s, %s)", z["clave"], z["nombre"],
+                         "≤ " if z["estado"] == "menor_que_minimo" else "", z["radio_m"],
+                         z["magnitud"], z["limite_msv"], z["periodo"], z["escenarios"])
+    for a in res.get("avisos", []):
+        logging.warning(a)
     return res
 
 
@@ -273,9 +338,12 @@ def main():
     ap.add_argument("--lat", type=float, default=DEFAULT_LAT)
     ap.add_argument("--lon", type=float, default=DEFAULT_LON)
     ap.add_argument("--rumbo", type=float, default=DEFAULT_HEADING, help="ship heading [deg]")
+    ap.add_argument("--e2", type=Path, default=None,
+                    help="postprocess folder of scenario E2 (default: <postprocess>/../E2/postprocess if it exists)")
     a = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(levelname)-8s %(message)s")
-    generar(a.postprocess, a.lat, a.lon, a.rumbo)
+    e2 = a.e2 or (a.postprocess.parent / "E2" / "postprocess")
+    generar(a.postprocess, a.lat, a.lon, a.rumbo, e2 if e2.exists() else None)
 
 
 if __name__ == "__main__":

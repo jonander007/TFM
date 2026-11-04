@@ -7,7 +7,7 @@ QUÉ HAY
   INPUT\                 Datos de entrada de la interfaz (MET, NIF, RFT, INP, PSF).
   preparar_met.py        Revisa y escribe los MET en las columnas que lee ARCON96.
   PIPELINE.py            Cadena completa: ARCON96 -> χ/Q -> RADTRAD -> dosis -> radios -> mapa.
-  zonas_emergencia.py    Radios del EAB (250 mSv, peores 2 h) y la LPZ (250 mSv, 30 d) y mapa.
+  zonas_emergencia.py    Radios de las zonas de la Tabla 4 (EAB, LPZ, medidas urgentes; E1 y E2) y mapa.
   visor_zonas.html       Plantilla del mapa (Leaflet). El resultado se escribe en psf_batch\postprocess.
   vendor\leaflet\        Leaflet 1.9.4 (librería libre del mapa), incluida en el proyecto.
   ver_mapa.py, VER_MAPA.bat   Abren el mapa en http://localhost con el fondo de OpenStreetMap.
@@ -73,3 +73,18 @@ ANTES DE EJECUTAR, COMPRUEBA
   * Borra las carpetas ARCON\ y psf_batch\ de ejecuciones anteriores.
   * Que RADTRAD acepta el caudal de 1,0E+06 cfm del camino 2 de template_kpfhr.psf
     (si no, pon 1,0E+05 en las dos líneas de ese camino).
+
+ESCENARIOS E1 Y E2 (capítulo 8 de la memoria)
+----------------------------------------------
+- E1: término fuente fuera del edificio del reactor (kpfhr_terminofuente.nif).
+- E2: el edificio pierde su capacidad de retención, por ejemplo por una colisión en puerto
+  (kpfhr_terminofuente_E2.nif, actividad tras el FLiBe).
+Si kpfhr_terminofuente_E2.nif está junto al .nif de E1 (INPUT\NIF o Defaults), el pipeline
+lanza RADTRAD para los dos escenarios con los mismos juegos de fracciones de yodo:
+E1 en la carpeta habitual y E2 en la subcarpeta E2\ (con la interfaz, RUN_N\OUTPUT\E2).
+El mapa y zonas_emergencia.json recogen las zonas de la Tabla 4 de la memoria:
+  EAB y LPZ (250 mSv TEDE, E1), evacuación (50 mSv en 7 días, E2), confinamiento
+  (10 mSv en 48 h, E1 y E2), profilaxis con yodo (100 mSv a tiroides en 7 días, E1 y E2),
+  zona de planificación (10 mSv en 96 h, E1 y E2) y efectos deterministas (E2).
+En el visor se puede elegir qué zonas se dibujan y cambiar cada criterio.
+Para generar el .nif de E2 de nuevo: python herramienta\generar_nif.py --escenario E2

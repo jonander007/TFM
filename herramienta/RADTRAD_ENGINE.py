@@ -910,6 +910,11 @@ def _stage_defaults(p: dict, dest: Path) -> tuple:
         if not src.exists():
             raise FileNotFoundError(f"Not found: {src}")
         shutil.copy2(src, dest / name)
+    # scenario E2 (reactor building not credited): PIPELINE runs it when <nif>_E2.nif is next to the .nif
+    e2 = DIR_NIF / (Path(nif).stem + "_E2.nif")
+    if e2.exists():
+        shutil.copy2(e2, dest / e2.name)
+        logging.info("Scenario E2 inventory: %s", e2.name)
     return rft, nif, inp
 
 
@@ -948,6 +953,9 @@ def run_gui(p: dict) -> int:
     post = run["radtrad"] / "postprocess"
     if post.exists():
         shutil.copytree(post, run["output"], dirs_exist_ok=True)
+    post_e2 = run["radtrad"] / "E2" / "postprocess"
+    if post_e2.exists():
+        shutil.copytree(post_e2, run["output"] / "E2", dirs_exist_ok=True)
     log = SCRIPT_DIR / "pipeline.log"
     if log.exists():
         shutil.copy2(log, run["output"] / "pipeline.log")

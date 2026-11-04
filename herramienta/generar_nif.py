@@ -28,7 +28,7 @@ Nuclides with no dose factors in RADTRAD's .inp (Defaults/fgr11&12.inp, complete
 by completar_inp.py) are left out and listed, with the activity they carry.
 
 Usage:
-  python generar_nif.py [workbook] [--potencia 320] [--salida Variables_NIF_terminofuente.txt] [--inp file]
+  python generar_nif.py [workbook] [--potencia 320] [--escenario E1|E2] [--salida Variables_NIF_terminofuente.txt] [--inp file]
 """
 
 from __future__ import annotations
@@ -46,6 +46,11 @@ from nubase import NUBASE_FILE, half_life  # noqa: E402
 DEFAULT_BOOK = ROOT / "datos" / "inventario" / "Calculosfueradelacontencion_NUBASE2020.xlsx"
 SHEET = "AZ6 RZ1 (ACCIDENT)"
 COL_NAME, COL_ZZ, COL_BUILDING = 2, 3, 56        # B, C, BD (95 % chain, after the building)
+COL_FLIBE = 55                                     # BC (95 % chain, after the FLiBe, before the building)
+# Scenarios of the memoria (chapter 8): E1 credits the reactor building; E2 assumes it has lost its
+# retention (e.g. a collision while manoeuvring in port), so the activity after the FLiBe reaches the
+# environment directly.
+SCENARIO_COL = {"E1": COL_BUILDING, "E2": COL_FLIBE}
 COL_STATE = 63                                     # BK: isomeric state of the rows added by normalizar_inventario.py
 BQ_PER_CI = 3.7e10
 TRITIUM_CI = 9 + 4743 + 1181 + 320 + 60 + 55     # KP-TR-012 Table B-1: salt, pebbles, reflector, vessel, piping, IHX
@@ -92,7 +97,7 @@ def decay_modes() -> dict:
     return out
 
 
-def build(book: Path, power: float, tritium: bool = True, inp: Path | None = None):
+def build(book: Path, power: float, tritium: bool = True, inp: Path | None = None, col: int = COL_BUILDING):
     """Inventory lines for the .nif. If `inp` is given, nuclides without dose factors in
     that file are left out (RADTRAD cannot compute their dose) and reported."""
     ws = load_workbook(book, data_only=True)[SHEET]
@@ -100,7 +105,7 @@ def build(book: Path, power: float, tritium: bool = True, inp: Path | None = Non
     rows = []
     for r in range(4, ws.max_row + 1):
         zz = ws.cell(r, COL_ZZ).value
-        act = ws.cell(r, COL_BUILDING).value
+        act = ws.cell(r, col).value
         if not isinstance(zz, (int, float)) or not isinstance(act, (int, float)) or act <= 0:
             continue
         zz = int(zz)
@@ -139,12 +144,18 @@ def main():
     ap.add_argument("--potencia", type=float, default=320.0, help="plant power level of the .psf [MWth]")
     ap.add_argument("--salida", type=Path, default=HERE / "Variables_NIF_terminofuente.txt")
     ap.add_argument("--sin-tritio", action="store_true", help="leave tritium (H-3) out of the inventory")
+    ap.add_argument("--escenario", choices=("E1", "E2"), default="E1",
+                    help="E1: activity outside the reactor building (column BD); E2: building not credited, "
+                         "activity after the FLiBe (column BC). E2 writes kpfhr_terminofuente_E2.nif")
     ap.add_argument("--inp", type=Path, default=HERE / "Defaults" / "fgr11&12.inp",
                     help="RADTRAD dose factor file; nuclides missing from it are left out ('' to keep all)")
     a = ap.parse_args()
     sys.path.insert(0, str(HERE))
     inp = a.inp if str(a.inp) and a.inp.exists() else None
-    lines, total, dropped = build(a.libro, a.potencia, tritium=not a.sin_tritio, inp=inp)
+    if a.escenario == "E2" and a.salida.name == "Variables_NIF_terminofuente.txt":
+        a.salida = a.salida.with_name("Variables_NIF_terminofuente_E2.txt")
+    lines, total, dropped = build(a.libro, a.potencia, tritium=not a.sin_tritio, inp=inp,
+                                  col=SCENARIO_COL[a.escenario])
     if dropped:
         lost = sum(c for _, c in dropped)
         print(f"Left out (no dose factors in {inp.name}): {len(dropped)} nuclides, {lost:.3E} Ci "
@@ -156,9 +167,11 @@ def main():
           f"({total / a.potencia:.4E} Ci/MWth at {a.potencia:g} MWth)")
     # also write the .nif itself, with the generator used by PIPELINE.py
     from PIPELINE import generate_nif
-    nif = a.salida.with_name("kpfhr_terminofuente.nif")
-    generate_nif(a.salida, nif, title="KP-FHR attenuated source term (Ci/MWth)")
-    print(f"{nif}: copy it to Defaults\\ and choose it when PIPELINE.py asks for the .nif")
+    e2 = a.escenario == "E2"
+    nif = a.salida.with_name("kpfhr_terminofuente_E2.nif" if e2 else "kpfhr_terminofuente.nif")
+    generate_nif(a.salida, nif, title=("KP-FHR source term, reactor building not credited (E2, Ci/MWth)" if e2
+                                       else "KP-FHR attenuated source term (Ci/MWth)"))
+    print(f"{nif}: copy it to Defaults\\ (PIPELINE.py runs E2 automatically when <nif>_E2.nif is next to the E1 .nif)")
 
 
 if __name__ == "__main__":
