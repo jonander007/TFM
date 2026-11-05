@@ -88,3 +88,13 @@ El mapa y zonas_emergencia.json recogen las zonas de la Tabla 4 de la memoria:
   zona de planificación (10 mSv en 96 h, E1 y E2) y efectos deterministas (E2).
 En el visor se puede elegir qué zonas se dibujan y cambiar cada criterio.
 Para generar el .nif de E2 de nuevo: python herramienta\generar_nif.py --escenario E2
+
+SENSIBILIDAD METEOROLÓGICA (capítulo 10 de la memoria)
+-------------------------------------------------------
+La serie meteorológica adaptada tiene clase A en el 27 % de las horas con vientos de unos
+7 m/s, lo que puede subestimar el χ/Q. El caso de sensibilidad repite toda la cadena con
+meteorología constante, clase F y 1 m/s todas las horas (accidente de referencia de ARPANSA).
+- Con la interfaz: marca «Sensibilidad meteorológica (clase F, 1 m/s)» en el panel de ARCON96.
+  Resultados en RUN_N\OUTPUT\SENS_F1 (E1) y RUN_N\OUTPUT\SENS_F1\E2.
+- Por consola: python sensibilidad_met.py  (mismas preguntas que PIPELINE.py; resultados en
+  psf_batch_F1\postprocess y ARCON96 en ARCON_F1).

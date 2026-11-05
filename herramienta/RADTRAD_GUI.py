@@ -1045,6 +1045,23 @@ class ArconWidget(tk.Frame):
                  bg=BG_CARD, fg=MUTED, font=("Segoe UI", 8),
                  wraplength=480, justify="left").pack(anchor="w", padx=8, pady=(0, 6))
 
+        # Meteorological sensitivity (memoria, chapter 10): class F, 1 m/s every hour
+        sens_card = tk.Frame(body, bg=BG_CARD,
+                             highlightthickness=1, highlightbackground=BORDER)
+        sens_card.pack(fill="x", pady=(4, 4))
+        self.sens_met = tk.BooleanVar(value=False)
+        tk.Checkbutton(sens_card,
+                       text="Sensibilidad meteorológica (clase F, 1 m/s)",
+                       variable=self.sens_met, bg=BG_CARD, fg=TEXT,
+                       selectcolor=BG_CARD, activebackground=BG_CARD,
+                       font=FONT_SM).pack(anchor="w", padx=8, pady=(6, 2))
+        tk.Label(sens_card,
+                 text="Tras el caso base, repite ARCON96, RADTRAD y las zonas con meteorología "
+                      "constante, clase F y 1 m/s (accidente de referencia de ARPANSA). "
+                      "Resultados en RUN_N/OUTPUT/SENS_F1.",
+                 bg=BG_CARD, fg=MUTED, font=("Segoe UI", 8),
+                 wraplength=480, justify="left").pack(anchor="w", padx=8, pady=(0, 6))
+
     def _browse(self):
         p = filedialog.askopenfilename(filetypes=[("Exe", "*.exe"), ("All", "*.*")])
         if p:
@@ -1057,7 +1074,8 @@ class ArconWidget(tk.Frame):
         return dict(dist_min=self.dist_min.get(), dist_max=self.dist_max.get(),
                     delta=self.delta.get(), arcon_exe=self.arcon_exe.get(),
                     delete_arcon_dirs=self.delete_dirs.get(),
-                    keep_work=self.keep_work.get())
+                    keep_work=self.keep_work.get(),
+                    sensibilidad_met=self.sens_met.get())
 
 
 # =============================================================================

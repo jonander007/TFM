@@ -945,6 +945,16 @@ def run_gui(p: dict) -> int:
         del_arcon=bool(p.get("delete_arcon_dirs", False)), ship=tuple(p.get("ship") or (43.353, -3.086, 300.0)),
         run_arcon=do_arcon, run_radtrad=do_radtrad, bridge_excel=p.get("bridge_excel", ""))
     rc = P.run(params)
+    sens = None
+    if rc == 0 and p.get("sensibilidad_met") and params["run_arcon"] and params["run_radtrad"]:
+        import sensibilidad_met
+        base_files = (P.XQ_EXCEL, P.TOTAL_XQ_EXCEL, P.XQ_MAX_TXT)       # keep the base case paths
+        sens = run["work"] / "RADTRAD_F1"
+        rc_s = sensibilidad_met.ejecutar(params, run["work"], sens, p.get("arcon_exe"), p.get("radtrad_exe"),
+                                         run["defaults"])
+        if rc_s != 0:
+            logging.error("Meteorological sensitivity case failed (rc=%d)", rc_s)
+        P.XQ_EXCEL, P.TOTAL_XQ_EXCEL, P.XQ_MAX_TXT = base_files
 
     # results to RUN_N/OUTPUT (the interface looks for the χ/Q Excel there)
     for f in (P.XQ_EXCEL, P.TOTAL_XQ_EXCEL, P.XQ_MAX_TXT):
@@ -956,6 +966,10 @@ def run_gui(p: dict) -> int:
     post_e2 = run["radtrad"] / "E2" / "postprocess"
     if post_e2.exists():
         shutil.copytree(post_e2, run["output"] / "E2", dirs_exist_ok=True)
+    if sens is not None and (sens / "postprocess").exists():
+        shutil.copytree(sens / "postprocess", run["output"] / "SENS_F1", dirs_exist_ok=True)
+        if (sens / "E2" / "postprocess").exists():
+            shutil.copytree(sens / "E2" / "postprocess", run["output"] / "SENS_F1" / "E2", dirs_exist_ok=True)
     log = SCRIPT_DIR / "pipeline.log"
     if log.exists():
         shutil.copy2(log, run["output"] / "pipeline.log")
