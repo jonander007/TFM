@@ -267,3 +267,10 @@ Herramienta: `sensibilidad_met.py` (MET01 de 8760 h, clase F, 1 m/s) por consola
 Pendiente: ejecución en Windows (E1, E2, SENS_F1), capítulo de resultados y reescritura del capítulo 7.
 
 - Velocidad del viento: el autor confirma que son medias horarias, no rachas. Cabeceras de la Tabla 16 «Velocidad máxima» → «Velocidad media» (10 y 58 m) y frase en el apartado 10.4.1.
+
+## Ejecución del 5-11-2026 (ARCON96): lectura del ISMR.cfd corregida
+
+- Resultados de ARCON96 coherentes: χ/Q decrece con la distancia (pendiente −1,8 a −1,9) y con el periodo; el «Maximmum Overall» coincide con el P95 de ARCON96; el P99,5 de 0–2 h coincide con el eje de la pluma en clase F y 2 m/s calculado con las fórmulas de ARCON96 (Pasquill–Gifford + meandro de NUREG/CR-6331).
+- Error encontrado: en 35 pares distancia–sector (30, 110, 130 y 370–470 m) el P99,5 de 12–720 h salía 10 veces mayor. ARCON96 fija el rango de la distribución por periodo (UPPER/LOW LIM. del ISMR.log) pero el ISMR.cfd imprime la columna XOQ de un solo periodo; cuando el máximo de 12 h baja una década, el bloque 12–720 h se leía con la escala de 1 h. Divididos por 10, los 35 casos decrecen con el periodo, quedan por encima del P95 del log y el cociente 12 h/8 h (0,73–0,80) es el de los pares sin error.
+- Corrección en PIPELINE.py: la escala de cada periodo se reconstruye con los límites del ISMR.log (N intervalos logarítmicos), y en cada caso se compara el P95 obtenido del CFD con el de ARCON96 (aviso si difieren más de un 10 %).
+- Efecto: 0–2 h (EAB) sin cambios; en 12–720 h pasa a gobernar el P95 global en todas las distancias. El tope de monotonía del pipeline había evitado que el error llegara a RADTRAD, pero dejaba la χ/Q de 8 h en todos los periodos largos de esas distancias (conservador para la LPZ).

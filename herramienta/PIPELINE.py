@@ -641,13 +641,54 @@ def _period_layout(n_values, header=None):
     return layout
 
 
+def _log_ranges(log_path):
+    """{hour: (upper, lower)} of the X/Q distribution of each averaging period (ISMR.log).
+
+    ARCON96 sets the range per period from that period's largest X/Q, in whole decades."""
+    try: raw = log_path.read_text(encoding="cp1252", errors="replace").splitlines()
+    except Exception: return {}
+    per = up = lo = None
+    for ln in raw:
+        u = ln.strip().upper()
+        if u.startswith("AVER. PER.") and per is None:
+            per = [int(float(x)) for x in NUM_RE.findall(ln)]
+        elif u.startswith("UPPER LIM.") and up is None:
+            up = [float(x) for x in NUM_RE.findall(ln)]
+        elif u.startswith("LOW LIM.") and lo is None:
+            lo = [float(x) for x in NUM_RE.findall(ln)]
+    if not per or not up or not lo or not (len(per) == len(up) == len(lo)):
+        return {}
+    return {h: (a, b) for h, a, b in zip(per, up, lo) if a > 0 and b > 0}
+
+
+_rescaled_logged = set()
+
+
+def _log_p95(log_path):
+    """ARCON96's own 95th percentiles {hour: X/Q} from ISMR.log (used to check the CFD reading)."""
+    try: raw = log_path.read_text(encoding="cp1252", errors="replace").splitlines()
+    except Exception: return {}
+    per = None
+    for i, ln in enumerate(raw):
+        if ln.strip().upper().startswith("AVER. PER.") and per is None:
+            per = [int(float(x)) for x in NUM_RE.findall(ln)]
+        if "95th PERCENTILE X/Q VALUES" in ln and per and i + 1 < len(raw):
+            vals = [float(x) for x in NUM_RE.findall(raw[i + 1])]
+            return dict(zip(per, vals)) if len(vals) == len(per) else {}
+    return {}
+
+
 def _parse_cfd(cfd_path):
     """Rows of an ISMR.cfd as {hour: (xoq, count)} for HORAS_VALIDAS.
 
-    ARCON96 writes the table in blocks side by side, each with its own XOQ column:
+    ARCON96 writes the table in blocks side by side, each with an XOQ column:
         XOQ   1   2   4   8      XOQ  12  24  96  168  360  720
-    The X/Q range (UPPER LIM. / LOW LIM. in ISMR.log) is set per averaging period, so
-    each count is paired with the XOQ of its own block, not with the first column."""
+    but the range of the distribution (UPPER LIM. / LOW LIM. in ISMR.log) is set for each
+    averaging period, and the printed XOQ column is that of one period only. When a longer
+    period has its largest X/Q one decade lower, its counts belong to a grid ten times lower
+    than the printed one (run of 5 Nov 2026: 12–720 h sector values ten times too high).
+    The grid of each period is therefore rebuilt from ISMR.log: N bins evenly spaced in
+    log scale from UPPER to LOW, XOQ_k = UPPER·(LOW/UPPER)^(k/N), k = 1…N."""
     try: raw = cfd_path.read_text(encoding="cp1252", errors="replace").splitlines()
     except Exception as e: logging.warning("Cannot read %s: %s", cfd_path, e); return []
     cols, rows = None, []
@@ -667,18 +708,35 @@ def _parse_cfd(cfd_path):
         counts, xoq = {}, None
         for h, v in zip(cols, vals):
             if h is None:
-                xoq = v                       # XOQ of the block that follows
+                xoq = v                       # XOQ printed for the block that follows
             else:
                 counts[h] = (xoq, v)
         if all(h in counts for h in HORAS_VALIDAS):
             rows.append(counts)
     if cols is None:
         logging.warning("No XOQ header in %s", cfd_path)
-    else:
-        layout = tuple(h for h in cols if h is not None)
-        if layout not in _layout_logged:
-            _layout_logged.add(layout)
-            logging.info("ARCON96 period layout: %s h", ", ".join(map(str, layout)))
+        return []
+    layout = tuple(h for h in cols if h is not None)
+    if layout not in _layout_logged:
+        _layout_logged.add(layout)
+        logging.info("ARCON96 period layout: %s h", ", ".join(map(str, layout)))
+    ranges = _log_ranges(cfd_path.parent / "ISMR.log")
+    n = len(rows)
+    if ranges and n:
+        for h in HORAS_VALIDAS:
+            if h not in ranges:
+                continue
+            up, lo = ranges[h]
+            grid = [up * (lo / up) ** (k / n) for k in range(1, n + 1)]
+            printed = rows[0][h][0]
+            if printed and abs(grid[0] / printed - 1) > 0.01 and (cfd_path, h) not in _rescaled_logged:
+                _rescaled_logged.add((cfd_path, h))
+                logging.info("%s: %g h X/Q range %.0e–%.0e differs from the printed XOQ column "
+                             "(first bin %.3e, rebuilt %.3e)", cfd_path.parent.name, h, up, lo, printed, grid[0])
+            for r, x in zip(rows, grid):
+                r[h] = (x, r[h][1])
+    elif n:
+        logging.warning("%s: no UPPER/LOW LIM. in ISMR.log; using the printed XOQ columns", cfd_path.parent.name)
     return [{h: c[h] for h in HORAS_VALIDAS} for c in rows]
 
 
@@ -744,10 +802,18 @@ def _build_percent_maps(totals, targets):
             if not tot or not cfd.exists(): continue
             rows = _parse_cfd(cfd)
             if not rows: continue
+            p95_log = _log_p95(dpath / "ISMR.log")
             for idx, hora in enumerate(HORAS_VALIDAS):
                 total = tot[idx]
                 if not total or total <= 0: continue
                 ac_pairs = [(r[hora][0], max(0.0, min(1.0, (total - r[hora][1]) / total))) for r in rows]
+                # Check: the 95th percentile read from the CFD must match ARCON96's own value
+                # (printed with 3 significant digits; one CFD bin is 10^(1/25), about 10 %)
+                ref = p95_log.get(hora)
+                chk = _interp_xoq(ac_pairs, 0.95)
+                if ref and chk and abs(chk / ref - 1) > 0.10:
+                    logging.warning("%s %g h: P95 from ISMR.cfd %.3e differs from ARCON96's %.3e — "
+                                    "check the CFD reading", dpath.name, hora, chk, ref)
                 for t in targets:
                     xq = _interp_xoq(ac_pairs, t)
                     if xq is not None: perc_maps[hora][t][v][xxx] = xq
