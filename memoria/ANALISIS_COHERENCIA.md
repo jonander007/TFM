@@ -264,4 +264,6 @@ Aplicado sobre `TFM_v8.docx` con control de cambios (`memoria/scripts/cap7_12.py
 
 Herramienta: `sensibilidad_met.py` (MET01 de 8760 h, clase F, 1 m/s) por consola o con la casilla de la interfaz; resultados en `OUTPUT/SENS_F1`.
 
-Pendiente: velocidad máxima del viento (¿rachas o medias horarias?), ejecución en Windows (E1, E2, SENS_F1), capítulo de resultados y reescritura del capítulo 7.
+Pendiente: ejecución en Windows (E1, E2, SENS_F1), capítulo de resultados y reescritura del capítulo 7.
+
+- Velocidad del viento: el autor confirma que son medias horarias, no rachas. Cabeceras de la Tabla 16 «Velocidad máxima» → «Velocidad media» (10 y 58 m) y frase en el apartado 10.4.1.

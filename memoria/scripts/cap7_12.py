@@ -227,3 +227,12 @@ C.on_paragraph(p_inter,
                "sedimentación de Henry es de Kairos y aquí no se usa; la transformación a 58 m es un giro neto de 90° "
                "en sentido horario (S → W). Actualizado: E1/E2, zonas de la Tabla 4, módulos de la herramienta y "
                "verificación con los códigos reales. Añadido: caso de sensibilidad meteorológica (clase F, 1 m/s).")
+
+# Wind speeds of the meteorological series are hourly means, not gusts (confirmed by the author)
+RR("Se parte de un conjunto de datos meteorológicos recogidos durante un año",
+   ", correspondientes a dos alturas",
+   ". Las velocidades del viento son medias horarias, no rachas, que es la magnitud que utiliza ARCON96, y "
+   "corresponden a dos alturas")
+for alt in ("10", "58"):
+    for _ in range(len([p_ for p_ in paras() if ("Velocidad máxima a %s" % alt) in ptext(p_)])):
+        RR("Velocidad máxima a %s" % alt, "máxima", "media", nth=0)
