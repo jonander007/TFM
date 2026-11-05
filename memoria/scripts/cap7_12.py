@@ -236,3 +236,12 @@ RR("Se parte de un conjunto de datos meteorológicos recogidos durante un año",
 for alt in ("10", "58"):
     for _ in range(len([p_ for p_ in paras() if ("Velocidad máxima a %s" % alt) in ptext(p_)])):
         RR("Velocidad máxima a %s" % alt, "máxima", "media", nth=0)
+
+# Map: ship drawn to scale and berthed by default at the BBG LNG jetty
+RR("La posición por defecto es el puerto exterior de Bilbao",
+   "La posición por defecto es el puerto exterior de Bilbao, en la zona de la terminal de GNL de Zierbena, y puede "
+   "cambiarse al lanzar el cálculo.",
+   "El buque se dibuja a escala, con la eslora y la manga del buque de referencia del capítulo "
+   "@REFN:_RefCap_buque|6@ (284,4 × 42,5 m), y por defecto aparece atracado en el pantalán de metaneros de la terminal de GNL "
+   "de Bahía de Bizkaia Gas, en Punta Ceballos (Zierbena). La posición, el rumbo y las dimensiones pueden cambiarse "
+   "al lanzar el cálculo o en el propio visor.")

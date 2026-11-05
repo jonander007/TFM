@@ -1759,9 +1759,9 @@ def run(p):
     logging.info("PHASE 4  —  Emergency zones (E1 and E2) → mapa_zonas.html")
     logging.info("=" * 62)
     try:
-        from zonas_emergencia import generar
+        from zonas_emergencia import generar, DEFAULT_LAT, DEFAULT_LON, DEFAULT_HEADING
         e2_post = out_root / "E2" / "postprocess"
-        generar(out_root / "postprocess", *p.get("ship", (43.353, -3.086, 300.0)),
+        generar(out_root / "postprocess", *(p.get("ship") or (DEFAULT_LAT, DEFAULT_LON, DEFAULT_HEADING)),
                 e2=e2_post if "E2" in worst2h_by and e2_post.exists() else None)
     except Exception as e:
         logging.error("Zone map not generated: %s", e)

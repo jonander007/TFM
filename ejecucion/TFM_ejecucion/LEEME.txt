@@ -47,7 +47,7 @@ CÓMO EJECUTAR POR CONSOLA (sin interfaz)
   3. Todas las preguntas se hacen al principio. Pulsa ENTER para aceptar los valores por defecto:
        MET files count 5 · distancias 10 a 400 m cada 10 m · 6 juegos de fracciones de yodo
        plantilla template_kpfhr.psf · kpfhr_directo.rft · kpfhr_terminofuente.nif · fgr11&12.inp
-       posición del buque 43.3530, -3.0860, rumbo 300 (puerto exterior de Bilbao)
+       posición del buque 43.3605, -3.0820, rumbo 300 (pantalán de GNL de BBG, Zierbena; aprox.)
      Si el radio de alguna zona supera 400 m, repite con una distancia máxima mayor
      (hasta 1.200 m, límite de validez de ARCON96 según KP-TR-012).
   4. Al terminar, haz doble clic en VER_MAPA.bat: abre psf_batch\postprocess\mapa_zonas.html
@@ -92,6 +92,16 @@ El mapa y zonas_emergencia.json recogen las zonas de la Tabla 4 de la memoria:
   zona de planificación (10 mSv en 96 h, E1 y E2) y efectos deterministas (E2).
 En el visor se puede elegir qué zonas se dibujan y cambiar cada criterio.
 Para generar el .nif de E2 de nuevo: python herramienta\generar_nif.py --escenario E2
+
+BUQUE EN EL MAPA
+----------------
+El buque se dibuja a escala (metanero de referencia de la memoria, 284,4 × 42,5 m) y por defecto
+aparece atracado en el pantalán de metaneros de BBG (Punta Ceballos, Zierbena), con rumbo 300°
+(dirección de la proa). Eslora, manga, posición y rumbo se cambian en el panel del visor; el
+buque se mueve arrastrando su punto central. La posición por defecto es APROXIMADA: para fijarla,
+elige la capa «Satélite (Esri)», encaja el buque en el pantalán (arrastre + rumbo), pulsa
+«Copiar» y envía las coordenadas; se cambian en zonas_emergencia.py (DEFAULT_LAT, DEFAULT_LON,
+DEFAULT_HEADING) y en visor_zonas.html (const DEFAULT).
 
 SENSIBILIDAD METEOROLÓGICA (capítulo 10 de la memoria)
 -------------------------------------------------------

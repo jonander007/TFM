@@ -677,18 +677,23 @@ button:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
     <section>
       <h2>Buque</h2>
       <div class="grid3">
-        <label for="lat">Latitud<input id="lat" type="number" step="0.0001"></label>
-        <label for="lon">Longitud<input id="lon" type="number" step="0.0001"></label>
-        <label for="rumbo">Rumbo (°)<input id="rumbo" type="number" step="5" min="0" max="360"></label>
+        <label for="lat">Latitud<input id="lat" type="number" step="0.00005"></label>
+        <label for="lon">Longitud<input id="lon" type="number" step="0.00005"></label>
+        <label for="rumbo">Rumbo (°)<input id="rumbo" type="number" step="1" min="0" max="360"></label>
+      </div>
+      <div class="grid3">
+        <label for="eslora">Eslora (m)<input id="eslora" type="number" step="0.1" min="1"></label>
+        <label for="manga">Manga (m)<input id="manga" type="number" step="0.1" min="1"></label>
+        <label for="copiar">Posición<button id="copiar" type="button">Copiar</button></label>
       </div>
       <label for="atraque">Atraque
         <select id="atraque">
           <option value="">Posición personalizada</option>
-          <option value="43.3530,-3.0860">Puerto exterior, Zierbena (aprox.)</option>
-          <option value="43.3330,-3.0300">Santurtzi (aprox.)</option>
+          <option value="bbg">Pantalán de GNL de BBG, Punta Ceballos (Zierbena)</option>
         </select>
       </label>
-      <p class="hint" id="movehint">Haz clic en el mapa o arrastra el buque para moverlo.</p>
+      <p class="hint" id="movehint">El buque se dibuja a escala con su eslora y manga; el rumbo es la dirección de la proa. Arrastra el punto central o haz clic en el mapa para moverlo.</p>
+      <p class="hint" id="copiado" hidden></p>
     </section>
 
     <section>
@@ -708,7 +713,7 @@ button:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
       <p class="hint" id="src"></p>
     </section>
 
-    <div class="foot">Radio = menor distancia a partir de la cual la envolvente de todos los juegos de fracciones de yodo no supera el criterio (interpolación logarítmica). Circunferencias centradas en el buque con el χ/Q del sector más desfavorable.</div>
+    <div class="foot">Radio = menor distancia a partir de la cual la envolvente de todos los juegos de fracciones de yodo no supera el criterio (interpolación logarítmica). Circunferencias centradas en el centro del buque con el χ/Q del sector más desfavorable.</div>
   </aside>
 
   <main class="mapwrap">
@@ -721,8 +726,11 @@ button:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
 <script src="vendor/leaflet/leaflet.js"></script>
 <script>
 const EMBEDDED = /*DATOS*/null/*FIN*/;
-const DEFAULT = { lat: 43.3530, lon: -3.0860, rumbo: 300 };
-const S = { data: null, lat: DEFAULT.lat, lon: DEFAULT.lon, rumbo: DEFAULT.rumbo, lim: {}, show: {}, mode: "map" };
+// Default berth: LNG carrier jetty of BBG (Punta Ceballos, Zierbena), approximate; reference ship of the
+// memoria (Table 7). The same values are in zonas_emergencia.py (DEFAULT_*, SHIP_*).
+const DEFAULT = { lat: 43.3605, lon: -3.0820, rumbo: 300, eslora: 284.4, manga: 42.5 };
+const S = { data: null, lat: DEFAULT.lat, lon: DEFAULT.lon, rumbo: DEFAULT.rumbo, eslora: DEFAULT.eslora,
+            manga: DEFAULT.manga, lim: {}, show: {}, mode: "map" };
 // Zone metadata: from zonas_emergencia.json (Table 4 of the memoria); EAB/LPZ fallback for older files.
 const ZDEF = {
   EAB: { nombre: "Límite del área de exclusión (EAB)", periodo: "peores 2 h", limite_msv: 250, magnitud: "TEDE", escenarios: "E1", color: "#c0392b" },
@@ -824,8 +832,23 @@ function renderChart(zs) {
 function niceStep(raw) { const p = 10 ** Math.floor(Math.log10(raw)); return [1, 2, 5, 10].map(m => m * p).find(s => s >= raw) || p * 10; }
 
 // ------------------------------------------------------------------- map
-let map = null, shipMarker = null, circles = {};
+let map = null, shipMarker = null, hullLayer = null, circles = {};
 const shipSvg = () => `<svg width="30" height="30" viewBox="-15 -15 30 30" style="transform:rotate(${S.rumbo}deg)"><path d="M0,-14 L6,-4 L6,12 L-6,12 L-6,-4 Z" fill="${css("--accent")}" stroke="#fff" stroke-width="1.5"/></svg>`;
+const handleSvg = () => `<svg width="14" height="14" viewBox="-7 -7 14 14"><circle r="5" fill="#fff" stroke="${css("--accent")}" stroke-width="2.5"/></svg>`;
+// Hull outline in ship axes (x to starboard, y to the bow), metres, centred amidships (as casco() in zonas_emergencia.py)
+function casco() {
+  const L = S.eslora / 2, B = S.manga / 2;
+  const half = [[0.5 * B, 0.93 * L], [0.85 * B, 0.82 * L], [B, 0.66 * L], [B, -0.97 * L], [0.9 * B, -L]];
+  return [[0, L], ...half, ...half.slice().reverse().map(([x, y]) => [-x, y])];
+}
+// Rotate by the heading (clockwise from north) to east/north metres
+const aEN = ([x, y]) => { const a = S.rumbo * Math.PI / 180; return [x * Math.cos(a) + y * Math.sin(a), -x * Math.sin(a) + y * Math.cos(a)]; };
+function hullLatLngs() {
+  const mLat = 111320, mLon = 111320 * Math.cos(S.lat * Math.PI / 180);
+  return casco().map(aEN).map(([e, n]) => [S.lat + n / mLat, S.lon + e / mLon]);
+}
+// Below ~16 px of length the hull is not visible: show the symbol instead
+function hullPixels() { return map ? S.eslora / (156543.03 * Math.cos(S.lat * Math.PI / 180) / 2 ** map.getZoom()) : 0; }
 
 function initMap() {
   if (typeof L === "undefined") { esquemaMode(); return; }
@@ -852,6 +875,7 @@ function initMap() {
   L.control.layers(bases, null, { collapsed: false, position: "topright" }).addTo(map);
   setTimeout(() => { if (!loaded) esquemaMode(); }, 4000);
   map.on("click", e => { setShip(e.latlng.lat, e.latlng.lng); $("atraque").value = ""; });
+  map.on("zoomend", () => { if (S.data) drawShip(); });
   L.control.scale({ imperial: false }).addTo(map);
 }
 
@@ -865,13 +889,7 @@ function esquemaMode() {
 function drawMap(zs) {
   if (S.mode === "esquema" || !map) return drawEsquema(zs);
   const ll = [S.lat, S.lon];
-  if (!shipMarker) {
-    shipMarker = L.marker(ll, { draggable: true, icon: L.divIcon({ className: "", html: shipSvg(), iconSize: [30, 30], iconAnchor: [15, 15] }) }).addTo(map);
-    shipMarker.on("dragend", e => { const p = e.target.getLatLng(); setShip(p.lat, p.lng); $("atraque").value = ""; });
-  } else {
-    shipMarker.setLatLng(ll);
-    shipMarker.setIcon(L.divIcon({ className: "", html: shipSvg(), iconSize: [30, 30], iconAnchor: [15, 15] }));
-  }
+  drawShip();
   [...zs].sort((a, b) => (b.r || 0) - (a.r || 0)).forEach(z => {
     const c = ZMETA[z.key].color();
     if (circles[z.key]) { map.removeLayer(circles[z.key]); delete circles[z.key]; }
@@ -879,11 +897,29 @@ function drawMap(zs) {
     circles[z.key] = L.circle(ll, { radius: z.r, color: c, weight: 2, fillColor: c, fillOpacity: 0.12 }).addTo(map)
       .bindTooltip(`${z.key}: ${z.estado === "menor_que_minimo" ? "≤ " : ""}${fmt(z.r)} m`, { sticky: true });
   });
+  if (hullLayer) hullLayer.bringToFront();
   shipMarker.setZIndexOffset(1000);
 }
 
+function drawShip() {
+  const ll = [S.lat, S.lon], small = hullPixels() < 16;
+  const icon = small ? L.divIcon({ className: "", html: shipSvg(), iconSize: [30, 30], iconAnchor: [15, 15] })
+                     : L.divIcon({ className: "", html: handleSvg(), iconSize: [14, 14], iconAnchor: [7, 7] });
+  if (!shipMarker) {
+    shipMarker = L.marker(ll, { draggable: true, icon }).addTo(map)
+      .bindTooltip(() => `Buque ${fmt(S.eslora)} × ${fmt(S.manga)} m · rumbo ${S.rumbo}°`);
+    shipMarker.on("drag", e => { const p = e.target.getLatLng(); S.lat = p.lat; S.lon = p.lng; if (hullLayer) hullLayer.setLatLngs(hullLatLngs()); });
+    shipMarker.on("dragend", e => { const p = e.target.getLatLng(); setShip(p.lat, p.lng); $("atraque").value = ""; });
+  } else { shipMarker.setLatLng(ll); shipMarker.setIcon(icon); }
+  const c = css("--accent");
+  if (!hullLayer) hullLayer = L.polygon(hullLatLngs(), { color: "#fff", weight: 1, fillColor: c, fillOpacity: 0.9, interactive: false }).addTo(map);
+  else hullLayer.setLatLngs(hullLatLngs()).setStyle({ fillColor: c });
+  if (small) { if (map.hasLayer(hullLayer)) map.removeLayer(hullLayer); }
+  else if (!map.hasLayer(hullLayer)) hullLayer.addTo(map);
+}
+
 function drawEsquema(zs) {
-  const R = Math.max(50, ...zs.map(z => z.r || 0)) * 1.2, W = 800, k = (W / 2) / R;
+  const R = Math.max(S.eslora * 0.75, ...zs.map(z => z.r || 0)) * 1.2, W = 800, k = (W / 2) / R;
   let s = `<svg viewBox="${-W / 2} ${-W / 2} ${W} ${W}" preserveAspectRatio="xMidYMid meet">`;
   s += `<rect x="${-W / 2}" y="${-W / 2}" width="${W}" height="${W}" fill="${css("--sea")}"/>`;
   [...zs].sort((a, b) => (b.r || 0) - (a.r || 0)).forEach(z => {
@@ -892,7 +928,10 @@ function drawEsquema(zs) {
     s += `<circle r="${z.r * k}" fill="${c}" fill-opacity=".12" stroke="${c}" stroke-width="2.5"/>`;
     s += `<text x="${z.r * k * .71 + 8}" y="${-z.r * k * .71}" font-size="18" fill="${c}" font-family="IBM Plex Mono, monospace">${z.key} ${fmt(z.r)} m</text>`;
   });
-  s += `<g transform="rotate(${S.rumbo})"><path d="M0,-14 L6,-4 L6,12 L-6,12 L-6,-4 Z" fill="${css("--accent")}"/></g>`;
+  // Ship to scale (east = +x, north = -y in SVG); symbol on top when the hull is too small to see
+  const hull = casco().map(aEN).map(([e, n]) => `${(e * k).toFixed(2)},${(-n * k).toFixed(2)}`).join(" ");
+  s += `<polygon points="${hull}" fill="${css("--accent")}" stroke="#fff" stroke-width="1"/>`;
+  if (S.eslora * k < 16) s += `<g transform="rotate(${S.rumbo})"><path d="M0,-14 L6,-4 L6,12 L-6,12 L-6,-4 Z" fill="${css("--accent")}"/></g>`;
   const bar = niceStep(R / 3);
   s += `<g transform="translate(${-W / 2 + 30},${W / 2 - 40})"><line x2="${bar * k}" stroke="${css("--ink")}" stroke-width="3"/><text y="-8" font-size="15" fill="${css("--ink")}" font-family="IBM Plex Mono, monospace">${fmt(bar)} m</text></g>`;
   s += `<g transform="translate(${W / 2 - 40},${-W / 2 + 60})"><path d="M0,-26 L8,0 L0,-7 L-8,0 Z" fill="${css("--ink")}"/><text y="20" text-anchor="middle" font-size="15" fill="${css("--ink")}">N</text></g>`;
@@ -901,13 +940,20 @@ function drawEsquema(zs) {
 
 // --------------------------------------------------------------- control
 function setShip(lat, lon) { S.lat = +lat; S.lon = +lon; syncInputs(); render(); if (map) map.panTo([S.lat, S.lon]); }
-function syncInputs() { $("lat").value = S.lat.toFixed(4); $("lon").value = S.lon.toFixed(4); $("rumbo").value = S.rumbo; }
+function syncInputs() {
+  $("lat").value = S.lat.toFixed(5); $("lon").value = S.lon.toFixed(5); $("rumbo").value = S.rumbo;
+  $("eslora").value = S.eslora; $("manga").value = S.manga;
+  const def = Math.abs(S.lat - DEFAULT.lat) < 1e-6 && Math.abs(S.lon - DEFAULT.lon) < 1e-6;
+  if (def) $("atraque").value = "bbg";
+}
 function render() { if (!S.data) return; const zs = zonas(); renderPanel(zs); renderChart(zs); drawMap(zs); }
 let fitted = false;
 function load(data, label, demo) {
   S.data = data; S.lim = {}; S.show = {}; buildMeta(data);
   if (typeof data.lat === "number") { S.lat = data.lat; S.lon = data.lon; }
   if (typeof data.rumbo === "number") S.rumbo = data.rumbo;
+  if (typeof data.eslora_m === "number") S.eslora = data.eslora_m;
+  if (typeof data.manga_m === "number") S.manga = data.manga_m;
   $("demo").hidden = !demo;
   $("src").textContent = label + (data.n_sets ? ` · ${data.n_sets} juegos de fracciones` : "")
     + (data.escenarios ? ` · escenarios ${data.escenarios.join(" y ")}` : "")
@@ -918,7 +964,16 @@ function load(data, label, demo) {
 
 ["lat", "lon"].forEach(id => $(id).addEventListener("change", () => setShip($("lat").value, $("lon").value)));
 $("rumbo").addEventListener("input", () => { S.rumbo = ((+$("rumbo").value % 360) + 360) % 360; render(); });
-$("atraque").addEventListener("change", () => { const v = $("atraque").value; if (v) { const [a, b] = v.split(",").map(Number); setShip(a, b); } });
+$("atraque").addEventListener("change", () => {
+  if ($("atraque").value === "bbg") { S.rumbo = DEFAULT.rumbo; setShip(DEFAULT.lat, DEFAULT.lon); }
+});
+["eslora", "manga"].forEach(id => $(id).addEventListener("input", () => { const v = +$(id).value; if (v > 0) { S[id] = v; render(); } }));
+$("copiar").addEventListener("click", () => {
+  const t = `${S.lat.toFixed(5)}, ${S.lon.toFixed(5)}, rumbo ${S.rumbo}`;
+  const ok = () => { $("copiado").hidden = false; $("copiado").textContent = `Copiado: ${t}`; };
+  try { navigator.clipboard.writeText(t).then(ok, () => { $("copiado").hidden = false; $("copiado").textContent = t; }); }
+  catch { $("copiado").hidden = false; $("copiado").textContent = t; }
+});
 $("file").addEventListener("change", () => {
   const f = $("file").files[0]; if (!f) return;
   const rd = new FileReader();

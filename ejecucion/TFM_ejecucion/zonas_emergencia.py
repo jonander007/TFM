@@ -40,8 +40,22 @@ import pandas as pd
 
 REM_TO_MSV = 10.0
 
-# Default berth: outer port of Bilbao (Zierbena LNG terminal area, approximate)
-DEFAULT_LAT, DEFAULT_LON, DEFAULT_HEADING = 43.3530, -3.0860, 300.0
+# Default berth: LNG carrier jetty of the Bahía de Bizkaia Gas (BBG) terminal, Punta Ceballos,
+# Zierbena (outer port of Bilbao). APPROXIMATE position of the ship's centre: to be fixed on the
+# satellite view of the viewer ("Copiar posición") and written here.
+DEFAULT_LAT, DEFAULT_LON, DEFAULT_HEADING = 43.3605, -3.0820, 300.0
+DEFAULT_BERTH = "Pantalán de metaneros de BBG, Punta Ceballos (Zierbena)"
+# Reference ship (memoria, Table 7): LNG carrier, length overall and beam [m]
+SHIP_LENGTH_M, SHIP_BEAM_M = 284.4, 42.5
+SHIP_NAME = "Metanero de referencia (284,4 × 42,5 m)"
+
+
+def casco(eslora: float = SHIP_LENGTH_M, manga: float = SHIP_BEAM_M):
+    """Hull outline in ship axes (x to starboard, y to the bow), metres, centred amidships:
+    parallel body, bow tapering over the forward 17 % of the length, square stern."""
+    L, B = eslora / 2.0, manga / 2.0
+    half = [(0.5 * B, 0.93 * L), (0.85 * B, 0.82 * L), (B, 0.66 * L), (B, -0.97 * L), (0.9 * B, -L)]
+    return [(0.0, L)] + half + [(-x, y) for x, y in reversed(half)]
 
 
 @dataclass
@@ -277,7 +291,7 @@ def escribir_png(resultado: Dict, png: Path, titulo: str = "Zonas de emergencia 
         logging.warning("matplotlib not installed: mapa_zonas.png not written")
         return None
     zonas = [z for z in resultado["zonas"] if z["radio_m"] is not None]
-    R = max([z["radio_m"] for z in zonas] + [50.0]) * 1.2
+    R = max([z["radio_m"] for z in zonas] + [resultado.get("eslora_m", SHIP_LENGTH_M) * 0.75]) * 1.2
     fig, ax = plt.subplots(figsize=(6.5, 6.5), dpi=150)
     ax.set_facecolor("#eef3f7")
     for z in sorted(zonas, key=lambda z: -z["radio_m"]):
@@ -287,10 +301,11 @@ def escribir_png(resultado: Dict, png: Path, titulo: str = "Zonas de emergencia 
                                 z["clave"], "≤ " if z["estado"] == "menor_que_minimo" else "",
                                 z["radio_m"], z["limite_msv"], z["periodo"])))
     a = math.radians(resultado.get("rumbo", 0.0))
-    hull = [(0, 13), (6, 4), (6, -11), (-6, -11), (-6, 4)]
-    s_ = R / 120.0
-    pts = [(s_ * (x * math.cos(a) + y * math.sin(a)), s_ * (-x * math.sin(a) + y * math.cos(a))) for x, y in hull]
-    ax.add_patch(Polygon(pts, closed=True, color="#1f4e79", zorder=5, label="Buque (icono no a escala)"))
+    eslora = resultado.get("eslora_m", SHIP_LENGTH_M)
+    manga = resultado.get("manga_m", SHIP_BEAM_M)
+    pts = [(x * math.cos(a) + y * math.sin(a), -x * math.sin(a) + y * math.cos(a)) for x, y in casco(eslora, manga)]
+    ax.add_patch(Polygon(pts, closed=True, facecolor="#1f4e79", edgecolor="white", lw=0.8, zorder=5,
+                         label="Buque a escala (%.1f × %.1f m)" % (eslora, manga)))
     ax.annotate("N", xy=(0.93, 0.95), xytext=(0.93, 0.85), xycoords="axes fraction",
                 ha="center", arrowprops=dict(arrowstyle="-|>", color="#333"))
     ax.set_xlim(-R, R)
@@ -311,7 +326,8 @@ def generar(postprocess: Path, lat: float = DEFAULT_LAT, lon: float = DEFAULT_LO
             rumbo: float = DEFAULT_HEADING, e2: Optional[Path] = None) -> Dict:
     """Compute the zones and write zonas_emergencia.json and mapa_zonas.html (in the E1 folder)."""
     res = calcular_zonas(postprocess, e2)
-    res.update(lat=lat, lon=lon, rumbo=rumbo)
+    res.update(lat=lat, lon=lon, rumbo=rumbo, eslora_m=SHIP_LENGTH_M, manga_m=SHIP_BEAM_M, buque=SHIP_NAME,
+               atraque=DEFAULT_BERTH if (lat, lon) == (DEFAULT_LAT, DEFAULT_LON) else "Posición personalizada")
     (postprocess / "zonas_emergencia.json").write_text(
         json.dumps(res, indent=2, ensure_ascii=False), encoding="utf-8")
     try:

@@ -829,6 +829,12 @@ except ImportError as _dep_err:
     _PIPELINE_DEPS_ERROR = str(_dep_err)
 
 
+def _default_ship():
+    """Default berth and heading of the map (zonas_emergencia.py)."""
+    from zonas_emergencia import DEFAULT_LAT, DEFAULT_LON, DEFAULT_HEADING
+    return (DEFAULT_LAT, DEFAULT_LON, DEFAULT_HEADING)
+
+
 def set_gui_mode(enabled: bool = True):
     """Call this from the GUI before launching the pipeline."""
     global GUI_MODE
@@ -942,7 +948,7 @@ def run_gui(p: dict) -> int:
         nsets=nsets, fixed_sets=fixed, support_names=support,
         radtrad_exe=Path(p.get("radtrad_exe") or P.RADTRAD_EXE), out_root=run["radtrad"], out_action="3",
         no_run=bool(p.get("no_run", False)), workers=int(p.get("workers") or max(1, (os.cpu_count() or 2) - 1)),
-        del_arcon=bool(p.get("delete_arcon_dirs", False)), ship=tuple(p.get("ship") or (43.353, -3.086, 300.0)),
+        del_arcon=bool(p.get("delete_arcon_dirs", False)), ship=tuple(p.get("ship") or _default_ship()),
         run_arcon=do_arcon, run_radtrad=do_radtrad, bridge_excel=p.get("bridge_excel", ""))
     rc = P.run(params)
     sens = None
