@@ -274,3 +274,10 @@ Pendiente: ejecución en Windows (E1, E2, SENS_F1), capítulo de resultados y re
 - Error encontrado: en 35 pares distancia–sector (30, 110, 130 y 370–470 m) el P99,5 de 12–720 h salía 10 veces mayor. ARCON96 fija el rango de la distribución por periodo (UPPER/LOW LIM. del ISMR.log) pero el ISMR.cfd imprime la columna XOQ de un solo periodo; cuando el máximo de 12 h baja una década, el bloque 12–720 h se leía con la escala de 1 h. Divididos por 10, los 35 casos decrecen con el periodo, quedan por encima del P95 del log y el cociente 12 h/8 h (0,73–0,80) es el de los pares sin error.
 - Corrección en PIPELINE.py: la escala de cada periodo se reconstruye con los límites del ISMR.log (N intervalos logarítmicos), y en cada caso se compara el P95 obtenido del CFD con el de ARCON96 (aviso si difieren más de un 10 %).
 - Efecto: 0–2 h (EAB) sin cambios; en 12–720 h pasa a gobernar el P95 global en todas las distancias. El tope de monotonía del pipeline había evitado que el error llegara a RADTRAD, pero dejaba la χ/Q de 8 h en todos los periodos largos de esas distancias (conservador para la LPZ).
+
+## Ejecución con la lectura del CFD corregida (10–400 m cada 10 m, un juego de fracciones)
+
+- χ/Q: sin saltos; decrece con la distancia (pendiente −1,8 a −1,95) y con el periodo; 1–2 h gobierna el P99,5 del sector (1,03–1,09 × P95 global) y desde 12 h el P95 global. Tabla del .psf idéntica a la prevista (110 m: 7,42e-4 · 5,73e-4 · … · 3,12e-4 · 2,86e-4 s/m³).
+- RADTRAD lee bien el χ/Q: TEDE/χ/Q(0–2 h) = 1418,1 mSv·m³/s en las 40 distancias (dispersión 0,01 %). A mano, solo H-3 por inhalación (6368 Ci, 3,5e-4 m³/s, 1,73e-11 Sv/Bq): 1427 (−0,6 %).
+- El tritio domina: TEDE/dosis de nube = 278. Las fracciones de yodo y el AF del edificio (E2) apenas cambian la TEDE.
+- Radios (E1, TEDE de las peores 2 h; la emisión acaba a las 2 h, así que 48 h y 7 d ≈ 2 h): EAB/LPZ ≤ 10 m, evacuación ≈ 14 m, confinamiento y planificación ≈ 34 m, deterministas ≤ 10 m. Todos dentro de la eslora del buque (284 m).
