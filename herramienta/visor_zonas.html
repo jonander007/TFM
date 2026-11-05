@@ -684,15 +684,16 @@ button:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
       <div class="grid3">
         <label for="eslora">Eslora (m)<input id="eslora" type="number" step="0.1" min="1"></label>
         <label for="manga">Manga (m)<input id="manga" type="number" step="0.1" min="1"></label>
-        <label for="copiar">Posición<button id="copiar" type="button">Copiar</button></label>
+        <label for="popa">Reactor a popa (m)<input id="popa" type="number" step="1" min="0"></label>
       </div>
+      <button id="copiar" type="button">Copiar posición del buque</button>
       <label for="atraque">Atraque
         <select id="atraque">
           <option value="">Posición personalizada</option>
           <option value="bbg">Pantalán de GNL de BBG, Punta Ceballos (Zierbena)</option>
         </select>
       </label>
-      <p class="hint" id="movehint">El buque se dibuja a escala con su eslora y manga; el rumbo es la dirección de la proa. Arrastra el punto central o haz clic en el mapa para moverlo.</p>
+      <p class="hint" id="movehint">El buque se dibuja a escala con su eslora y manga; el rumbo es la dirección de la proa. Las zonas se centran en el reactor (punto amarillo), a la distancia indicada de la popa. Arrastra el punto blanco (centro del buque) o haz clic en el mapa para moverlo.</p>
       <p class="hint" id="copiado" hidden></p>
     </section>
 
@@ -713,7 +714,7 @@ button:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
       <p class="hint" id="src"></p>
     </section>
 
-    <div class="foot">Radio = menor distancia a partir de la cual la envolvente de todos los juegos de fracciones de yodo no supera el criterio (interpolación logarítmica). Circunferencias centradas en el centro del buque con el χ/Q del sector más desfavorable.</div>
+    <div class="foot">Radio = menor distancia a partir de la cual la envolvente de todos los juegos de fracciones de yodo no supera el criterio (interpolación logarítmica). Circunferencias centradas en el reactor, a popa, con el χ/Q del sector más desfavorable.</div>
   </aside>
 
   <main class="mapwrap">
@@ -728,9 +729,10 @@ button:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
 const EMBEDDED = /*DATOS*/null/*FIN*/;
 // Default berth: LNG carrier jetty of BBG (Punta Ceballos, Zierbena), approximate; reference ship of the
 // memoria (Table 7). The same values are in zonas_emergencia.py (DEFAULT_*, SHIP_*).
-const DEFAULT = { lat: 43.3605, lon: -3.0820, rumbo: 300, eslora: 284.4, manga: 42.5 };
+// The zones are centred on the reactor, in the aft machinery space (popa = distance from the stern, m).
+const DEFAULT = { lat: 43.3605, lon: -3.0820, rumbo: 300, eslora: 284.4, manga: 42.5, popa: 28 };
 const S = { data: null, lat: DEFAULT.lat, lon: DEFAULT.lon, rumbo: DEFAULT.rumbo, eslora: DEFAULT.eslora,
-            manga: DEFAULT.manga, lim: {}, show: {}, mode: "map" };
+            manga: DEFAULT.manga, popa: DEFAULT.popa, lim: {}, show: {}, mode: "map" };
 // Zone metadata: from zonas_emergencia.json (Table 4 of the memoria); EAB/LPZ fallback for older files.
 const ZDEF = {
   EAB: { nombre: "Límite del área de exclusión (EAB)", periodo: "peores 2 h", limite_msv: 250, magnitud: "TEDE", escenarios: "E1", color: "#c0392b" },
@@ -832,7 +834,7 @@ function renderChart(zs) {
 function niceStep(raw) { const p = 10 ** Math.floor(Math.log10(raw)); return [1, 2, 5, 10].map(m => m * p).find(s => s >= raw) || p * 10; }
 
 // ------------------------------------------------------------------- map
-let map = null, shipMarker = null, hullLayer = null, circles = {};
+let map = null, shipMarker = null, hullLayer = null, reactorLayer = null, circles = {};
 const shipSvg = () => `<svg width="30" height="30" viewBox="-15 -15 30 30" style="transform:rotate(${S.rumbo}deg)"><path d="M0,-14 L6,-4 L6,12 L-6,12 L-6,-4 Z" fill="${css("--accent")}" stroke="#fff" stroke-width="1.5"/></svg>`;
 const handleSvg = () => `<svg width="14" height="14" viewBox="-7 -7 14 14"><circle r="5" fill="#fff" stroke="${css("--accent")}" stroke-width="2.5"/></svg>`;
 // Hull outline in ship axes (x to starboard, y to the bow), metres, centred amidships (as casco() in zonas_emergencia.py)
@@ -843,10 +845,10 @@ function casco() {
 }
 // Rotate by the heading (clockwise from north) to east/north metres
 const aEN = ([x, y]) => { const a = S.rumbo * Math.PI / 180; return [x * Math.cos(a) + y * Math.sin(a), -x * Math.sin(a) + y * Math.cos(a)]; };
-function hullLatLngs() {
-  const mLat = 111320, mLon = 111320 * Math.cos(S.lat * Math.PI / 180);
-  return casco().map(aEN).map(([e, n]) => [S.lat + n / mLat, S.lon + e / mLon]);
-}
+const reactorY = () => -(S.eslora / 2 - S.popa);          // along the ship axis from amidships (aft < 0)
+function toLatLng([e, n]) { const mLon = 111320 * Math.cos(S.lat * Math.PI / 180); return [S.lat + n / 111320, S.lon + e / mLon]; }
+function hullLatLngs() { return casco().map(aEN).map(toLatLng); }
+function reactorLatLng() { return toLatLng(aEN([0, reactorY()])); }
 // Below ~16 px of length the hull is not visible: show the symbol instead
 function hullPixels() { return map ? S.eslora / (156543.03 * Math.cos(S.lat * Math.PI / 180) / 2 ** map.getZoom()) : 0; }
 
@@ -888,7 +890,7 @@ function esquemaMode() {
 
 function drawMap(zs) {
   if (S.mode === "esquema" || !map) return drawEsquema(zs);
-  const ll = [S.lat, S.lon];
+  const ll = reactorLatLng();
   drawShip();
   [...zs].sort((a, b) => (b.r || 0) - (a.r || 0)).forEach(z => {
     const c = ZMETA[z.key].color();
@@ -897,7 +899,8 @@ function drawMap(zs) {
     circles[z.key] = L.circle(ll, { radius: z.r, color: c, weight: 2, fillColor: c, fillOpacity: 0.12 }).addTo(map)
       .bindTooltip(`${z.key}: ${z.estado === "menor_que_minimo" ? "≤ " : ""}${fmt(z.r)} m`, { sticky: true });
   });
-  if (hullLayer) hullLayer.bringToFront();
+  if (hullLayer) hullLayer.bringToBack();          // zones (often smaller than the ship) on top of the hull
+  if (reactorLayer) reactorLayer.bringToFront();
   shipMarker.setZIndexOffset(1000);
 }
 
@@ -908,7 +911,12 @@ function drawShip() {
   if (!shipMarker) {
     shipMarker = L.marker(ll, { draggable: true, icon }).addTo(map)
       .bindTooltip(() => `Buque ${fmt(S.eslora)} × ${fmt(S.manga)} m · rumbo ${S.rumbo}°`);
-    shipMarker.on("drag", e => { const p = e.target.getLatLng(); S.lat = p.lat; S.lon = p.lng; if (hullLayer) hullLayer.setLatLngs(hullLatLngs()); });
+    shipMarker.on("drag", e => {
+      const p = e.target.getLatLng(); S.lat = p.lat; S.lon = p.lng;
+      if (hullLayer) hullLayer.setLatLngs(hullLatLngs());
+      if (reactorLayer) reactorLayer.setLatLng(reactorLatLng());
+      Object.values(circles).forEach(c => c.setLatLng(reactorLatLng()));
+    });
     shipMarker.on("dragend", e => { const p = e.target.getLatLng(); setShip(p.lat, p.lng); $("atraque").value = ""; });
   } else { shipMarker.setLatLng(ll); shipMarker.setIcon(icon); }
   const c = css("--accent");
@@ -916,12 +924,21 @@ function drawShip() {
   else hullLayer.setLatLngs(hullLatLngs()).setStyle({ fillColor: c });
   if (small) { if (map.hasLayer(hullLayer)) map.removeLayer(hullLayer); }
   else if (!map.hasLayer(hullLayer)) hullLayer.addTo(map);
+  if (!reactorLayer) reactorLayer = L.circleMarker(reactorLatLng(), { radius: 5, color: "#000", weight: 1.5, fillColor: "#f1c40f", fillOpacity: 1 })
+    .addTo(map).bindTooltip(() => `Reactor (${fmt(S.popa)} m de la popa): centro de las zonas`);
+  else reactorLayer.setLatLng(reactorLatLng());
+  if (small) { if (map.hasLayer(reactorLayer)) map.removeLayer(reactorLayer); }
+  else if (!map.hasLayer(reactorLayer)) reactorLayer.addTo(map);
 }
 
 function drawEsquema(zs) {
-  const R = Math.max(S.eslora * 0.75, ...zs.map(z => z.r || 0)) * 1.2, W = 800, k = (W / 2) / R;
+  const R = Math.max(S.eslora, ...zs.map(z => z.r || 0)) * 1.1, W = 800, k = (W / 2) / R;
   let s = `<svg viewBox="${-W / 2} ${-W / 2} ${W} ${W}" preserveAspectRatio="xMidYMid meet">`;
   s += `<rect x="${-W / 2}" y="${-W / 2}" width="${W}" height="${W}" fill="${css("--sea")}"/>`;
+  // Origin = reactor (centre of the circles); hull drawn relative to it, under the circles
+  const yr = reactorY();
+  const hull = casco().map(([x, y]) => aEN([x, y - yr])).map(([e, n]) => `${(e * k).toFixed(2)},${(-n * k).toFixed(2)}`).join(" ");
+  s += `<polygon points="${hull}" fill="${css("--accent")}" fill-opacity=".85" stroke="#fff" stroke-width="1"/>`;
   [...zs].sort((a, b) => (b.r || 0) - (a.r || 0)).forEach(z => {
     if (z.r === null) return;
     const c = ZMETA[z.key].color();
@@ -929,9 +946,8 @@ function drawEsquema(zs) {
     s += `<text x="${z.r * k * .71 + 8}" y="${-z.r * k * .71}" font-size="18" fill="${c}" font-family="IBM Plex Mono, monospace">${z.key} ${fmt(z.r)} m</text>`;
   });
   // Ship to scale (east = +x, north = -y in SVG); symbol on top when the hull is too small to see
-  const hull = casco().map(aEN).map(([e, n]) => `${(e * k).toFixed(2)},${(-n * k).toFixed(2)}`).join(" ");
-  s += `<polygon points="${hull}" fill="${css("--accent")}" stroke="#fff" stroke-width="1"/>`;
   if (S.eslora * k < 16) s += `<g transform="rotate(${S.rumbo})"><path d="M0,-14 L6,-4 L6,12 L-6,12 L-6,-4 Z" fill="${css("--accent")}"/></g>`;
+  s += `<circle r="5" fill="#f1c40f" stroke="#000" stroke-width="1.5"/>`;
   const bar = niceStep(R / 3);
   s += `<g transform="translate(${-W / 2 + 30},${W / 2 - 40})"><line x2="${bar * k}" stroke="${css("--ink")}" stroke-width="3"/><text y="-8" font-size="15" fill="${css("--ink")}" font-family="IBM Plex Mono, monospace">${fmt(bar)} m</text></g>`;
   s += `<g transform="translate(${W / 2 - 40},${-W / 2 + 60})"><path d="M0,-26 L8,0 L0,-7 L-8,0 Z" fill="${css("--ink")}"/><text y="20" text-anchor="middle" font-size="15" fill="${css("--ink")}">N</text></g>`;
@@ -942,7 +958,7 @@ function drawEsquema(zs) {
 function setShip(lat, lon) { S.lat = +lat; S.lon = +lon; syncInputs(); render(); if (map) map.panTo([S.lat, S.lon]); }
 function syncInputs() {
   $("lat").value = S.lat.toFixed(5); $("lon").value = S.lon.toFixed(5); $("rumbo").value = S.rumbo;
-  $("eslora").value = S.eslora; $("manga").value = S.manga;
+  $("eslora").value = S.eslora; $("manga").value = S.manga; $("popa").value = S.popa;
   const def = Math.abs(S.lat - DEFAULT.lat) < 1e-6 && Math.abs(S.lon - DEFAULT.lon) < 1e-6;
   if (def) $("atraque").value = "bbg";
 }
@@ -954,12 +970,16 @@ function load(data, label, demo) {
   if (typeof data.rumbo === "number") S.rumbo = data.rumbo;
   if (typeof data.eslora_m === "number") S.eslora = data.eslora_m;
   if (typeof data.manga_m === "number") S.manga = data.manga_m;
+  if (typeof data.reactor_desde_popa_m === "number") S.popa = data.reactor_desde_popa_m;
   $("demo").hidden = !demo;
   $("src").textContent = label + (data.n_sets ? ` · ${data.n_sets} juegos de fracciones` : "")
     + (data.escenarios ? ` · escenarios ${data.escenarios.join(" y ")}` : "")
     + ((data.avisos || []).length ? ` · ${data.avisos.join("; ")}` : "");
   syncInputs(); render();
-  if (map) { const c = Object.values(circles); if (c.length) map.fitBounds(L.featureGroup(c).getBounds().pad(0.3)); }
+  if (map) {
+    const c = Object.values(circles).concat(hullLayer ? [L.polygon(hullLatLngs())] : []);
+    if (c.length) map.fitBounds(L.featureGroup(c).getBounds().pad(0.2));
+  }
 }
 
 ["lat", "lon"].forEach(id => $(id).addEventListener("change", () => setShip($("lat").value, $("lon").value)));
@@ -968,6 +988,7 @@ $("atraque").addEventListener("change", () => {
   if ($("atraque").value === "bbg") { S.rumbo = DEFAULT.rumbo; setShip(DEFAULT.lat, DEFAULT.lon); }
 });
 ["eslora", "manga"].forEach(id => $(id).addEventListener("input", () => { const v = +$(id).value; if (v > 0) { S[id] = v; render(); } }));
+$("popa").addEventListener("input", () => { const v = +$("popa").value; if (v >= 0 && v <= S.eslora) { S.popa = v; render(); } });
 $("copiar").addEventListener("click", () => {
   const t = `${S.lat.toFixed(5)}, ${S.lon.toFixed(5)}, rumbo ${S.rumbo}`;
   const ok = () => { $("copiado").hidden = false; $("copiado").textContent = `Copiado: ${t}`; };

@@ -281,3 +281,4 @@ Pendiente: ejecución en Windows (E1, E2, SENS_F1), capítulo de resultados y re
 - RADTRAD lee bien el χ/Q: TEDE/χ/Q(0–2 h) = 1418,1 mSv·m³/s en las 40 distancias (dispersión 0,01 %). A mano, solo H-3 por inhalación (6368 Ci, 3,5e-4 m³/s, 1,73e-11 Sv/Bq): 1427 (−0,6 %).
 - El tritio domina: TEDE/dosis de nube = 278. Las fracciones de yodo y el AF del edificio (E2) apenas cambian la TEDE.
 - Radios (E1, TEDE de las peores 2 h; la emisión acaba a las 2 h, así que 48 h y 7 d ≈ 2 h): EAB/LPZ ≤ 10 m, evacuación ≈ 14 m, confinamiento y planificación ≈ 34 m, deterministas ≤ 10 m. Todos dentro de la eslora del buque (284 m).
+- Mapa: zonas centradas en el reactor, a popa (28 m de la popa por defecto, centro de la zona de máquinas de 30–35 m del capítulo 6), a 114 m del centro del buque. Visor, vista esquemática y mapa_zonas.png; memoria (cap. 12) actualizada.

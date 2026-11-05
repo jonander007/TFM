@@ -48,6 +48,26 @@ DEFAULT_BERTH = "Pantalán de metaneros de BBG, Punta Ceballos (Zierbena)"
 # Reference ship (memoria, Table 7): LNG carrier, length overall and beam [m]
 SHIP_LENGTH_M, SHIP_BEAM_M = 284.4, 42.5
 SHIP_NAME = "Metanero de referencia (284,4 × 42,5 m)"
+# Release point: the reactor, in the aft machinery space (memoria, chapter 6: 30–35 m long). Centre of
+# that space measured from the stern; the zones are centred there, not amidships.
+REACTOR_FROM_STERN_M = 28.0
+
+
+def reactor_y(eslora: float = SHIP_LENGTH_M, desde_popa: float = REACTOR_FROM_STERN_M) -> float:
+    """Position of the reactor along the ship axis, from amidships (negative = aft), metres."""
+    return -(eslora / 2.0 - desde_popa)
+
+
+def desplazar(lat: float, lon: float, este_m: float, norte_m: float):
+    """lat/lon of a point east_m/north_m metres away (local flat-earth approximation)."""
+    return lat + norte_m / 111320.0, lon + este_m / (111320.0 * math.cos(math.radians(lat)))
+
+
+def posicion_reactor(lat, lon, rumbo, eslora=SHIP_LENGTH_M, desde_popa=REACTOR_FROM_STERN_M):
+    """lat/lon of the reactor for a ship centred at lat/lon with the given heading (bow direction)."""
+    a = math.radians(rumbo)
+    y = reactor_y(eslora, desde_popa)
+    return desplazar(lat, lon, y * math.sin(a), y * math.cos(a))
 
 
 def casco(eslora: float = SHIP_LENGTH_M, manga: float = SHIP_BEAM_M):
@@ -291,29 +311,35 @@ def escribir_png(resultado: Dict, png: Path, titulo: str = "Zonas de emergencia 
         logging.warning("matplotlib not installed: mapa_zonas.png not written")
         return None
     zonas = [z for z in resultado["zonas"] if z["radio_m"] is not None]
-    R = max([z["radio_m"] for z in zonas] + [resultado.get("eslora_m", SHIP_LENGTH_M) * 0.75]) * 1.2
+    R = max([z["radio_m"] for z in zonas] + [resultado.get("eslora_m", SHIP_LENGTH_M)]) * 1.1
     fig, ax = plt.subplots(figsize=(6.5, 6.5), dpi=150)
     ax.set_facecolor("#eef3f7")
     for z in sorted(zonas, key=lambda z: -z["radio_m"]):
-        ax.add_patch(Circle((0, 0), z["radio_m"], facecolor=z["color"], alpha=0.12, edgecolor="none"))
-        ax.add_patch(Circle((0, 0), z["radio_m"], fill=False, edgecolor=z["color"], lw=2,
+        ax.add_patch(Circle((0, 0), z["radio_m"], facecolor=z["color"], alpha=0.12, edgecolor="none", zorder=2))
+        ax.add_patch(Circle((0, 0), z["radio_m"], fill=False, edgecolor=z["color"], lw=2, zorder=3,
                             label="%s: %s%.0f m (%.0f mSv, %s)" % (
                                 z["clave"], "≤ " if z["estado"] == "menor_que_minimo" else "",
                                 z["radio_m"], z["limite_msv"], z["periodo"])))
     a = math.radians(resultado.get("rumbo", 0.0))
     eslora = resultado.get("eslora_m", SHIP_LENGTH_M)
     manga = resultado.get("manga_m", SHIP_BEAM_M)
-    pts = [(x * math.cos(a) + y * math.sin(a), -x * math.sin(a) + y * math.cos(a)) for x, y in casco(eslora, manga)]
-    ax.add_patch(Polygon(pts, closed=True, facecolor="#1f4e79", edgecolor="white", lw=0.8, zorder=5,
+    yr = reactor_y(eslora, resultado.get("reactor_desde_popa_m", REACTOR_FROM_STERN_M))
+    # Origin at the reactor: hull points relative to it, rotated to east/north
+    pts = [(x * math.cos(a) + (y - yr) * math.sin(a), -x * math.sin(a) + (y - yr) * math.cos(a))
+           for x, y in casco(eslora, manga)]
+    ax.add_patch(Polygon(pts, closed=True, facecolor="#1f4e79", edgecolor="white", lw=0.8, alpha=0.85, zorder=1,
                          label="Buque a escala (%.1f × %.1f m)" % (eslora, manga)))
+    ax.plot([0], [0], marker="o", ms=6, mfc="#f1c40f", mec="black", zorder=6, ls="none",
+            label="Reactor (%.0f m de la popa): centro de las zonas" % resultado.get("reactor_desde_popa_m", REACTOR_FROM_STERN_M))
     ax.annotate("N", xy=(0.93, 0.95), xytext=(0.93, 0.85), xycoords="axes fraction",
                 ha="center", arrowprops=dict(arrowstyle="-|>", color="#333"))
     ax.set_xlim(-R, R)
     ax.set_ylim(-R, R)
     ax.set_aspect("equal")
-    ax.set_xlabel("Distancia E–O al buque [m]")
-    ax.set_ylabel("Distancia N–S al buque [m]")
-    ax.set_title("%s\n(%.4f, %.4f)" % (titulo, resultado.get("lat", 0), resultado.get("lon", 0)), fontsize=10)
+    ax.set_xlabel("Distancia E–O al reactor [m]")
+    ax.set_ylabel("Distancia N–S al reactor [m]")
+    ax.set_title("%s\nReactor en (%.5f, %.5f)" % (titulo, resultado.get("reactor_lat", resultado.get("lat", 0)),
+                                                resultado.get("reactor_lon", resultado.get("lon", 0))), fontsize=10)
     ax.legend(loc="lower left", fontsize=8, framealpha=0.9)
     ax.grid(alpha=0.3)
     fig.tight_layout()
@@ -326,7 +352,9 @@ def generar(postprocess: Path, lat: float = DEFAULT_LAT, lon: float = DEFAULT_LO
             rumbo: float = DEFAULT_HEADING, e2: Optional[Path] = None) -> Dict:
     """Compute the zones and write zonas_emergencia.json and mapa_zonas.html (in the E1 folder)."""
     res = calcular_zonas(postprocess, e2)
+    rlat, rlon = posicion_reactor(lat, lon, rumbo)
     res.update(lat=lat, lon=lon, rumbo=rumbo, eslora_m=SHIP_LENGTH_M, manga_m=SHIP_BEAM_M, buque=SHIP_NAME,
+               reactor_desde_popa_m=REACTOR_FROM_STERN_M, reactor_lat=rlat, reactor_lon=rlon,
                atraque=DEFAULT_BERTH if (lat, lon) == (DEFAULT_LAT, DEFAULT_LON) else "Posición personalizada")
     (postprocess / "zonas_emergencia.json").write_text(
         json.dumps(res, indent=2, ensure_ascii=False), encoding="utf-8")

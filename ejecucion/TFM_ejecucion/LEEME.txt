@@ -97,8 +97,10 @@ BUQUE EN EL MAPA
 ----------------
 El buque se dibuja a escala (metanero de referencia de la memoria, 284,4 × 42,5 m) y por defecto
 aparece atracado en el pantalán de metaneros de BBG (Punta Ceballos, Zierbena), con rumbo 300°
-(dirección de la proa). Eslora, manga, posición y rumbo se cambian en el panel del visor; el
-buque se mueve arrastrando su punto central. La posición por defecto es APROXIMADA: para fijarla,
+(dirección de la proa). Las zonas se centran en el reactor (punto amarillo), a popa, en la zona
+de máquinas: por defecto a 28 m de la popa (REACTOR_FROM_STERN_M en zonas_emergencia.py).
+Eslora, manga, distancia del reactor a la popa, posición y rumbo se cambian en el panel del
+visor; el buque se mueve arrastrando su punto central (punto blanco). La posición por defecto es APROXIMADA: para fijarla,
 elige la capa «Satélite (Esri)», encaja el buque en el pantalán (arrastre + rumbo), pulsa
 «Copiar» y envía las coordenadas; se cambian en zonas_emergencia.py (DEFAULT_LAT, DEFAULT_LON,
 DEFAULT_HEADING) y en visor_zonas.html (const DEFAULT).

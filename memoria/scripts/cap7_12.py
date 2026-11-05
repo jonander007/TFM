@@ -245,3 +245,9 @@ RR("La posición por defecto es el puerto exterior de Bilbao",
    "@REFN:_RefCap_buque|6@ (284,4 × 42,5 m), y por defecto aparece atracado en el pantalán de metaneros de la terminal de GNL "
    "de Bahía de Bizkaia Gas, en Punta Ceballos (Zierbena). La posición, el rumbo y las dimensiones pueden cambiarse "
    "al lanzar el cálculo o en el propio visor.")
+
+# Zones centred on the reactor, aft, not amidships
+RR("Las zonas se representan como circunferencias centradas en el buque",
+   "centradas en el buque con el radio",
+   "centradas en el reactor, situado a popa en la zona de máquinas (por defecto, a 28 m de la popa, en el centro "
+   "de los 30–35 m de esa zona), con el radio")
