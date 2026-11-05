@@ -58,9 +58,13 @@ CÓMO EJECUTAR POR CONSOLA (sin interfaz)
      En el selector de capas puedes cambiar a callejero o satélite de Esri. Para
      regenerar solo el mapa sin repetir el cálculo:  python zonas_emergencia.py psf_batch\postprocess
 
-QUÉ ENVIARME PARA LA MEMORIA
-  Comprime y envía:  ARCON\  (sobre todo los .xlsx y .txt de χ/Q)  y  psf_batch\postprocess\
-  y el registro de la ejecución, pipeline.log, que se crea en esta carpeta.
+QUÉ ENVIARME PARA COMPARAR LOS RESULTADOS
+  Con la interfaz: comprime la carpeta RUN_N\ completa (INPUT_USED, WORK y OUTPUT).
+    Si pesa demasiado: RUN_N\OUTPUT\ entero y, de RUN_N\WORK\, los .xlsx, los .log y tres
+    carpetas de caso de ARCON96 (X_..._V_...) de la distancia menor, una intermedia y la mayor,
+    más los .psf y .o0 de esas tres distancias de un juego de fracciones.
+  Por consola: ARCON\, psf_batch\ (con E2\ y postprocess\) y pipeline.log;
+    si has lanzado la sensibilidad, también ARCON_F1\ y psf_batch_F1\.
 
 SI ARCON96 TERMINA CON ERROR (rc=1)
   * Los MET tienen el formato de RADTRAD_ENGINE.py (_met_build_line), que reproduce hora a hora
