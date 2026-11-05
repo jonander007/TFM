@@ -250,3 +250,18 @@ Originales en `datos/arcon/met_original/`; `herramienta/preparar_met.py` genera 
     - manipulación de combustible excluida;
     - inundación fuera del alcance.
   - **E2 calculado por la herramienta:** con `kpfhr_terminofuente_E2.nif`. Como el edificio solo divide por 2 los yodos y las partículas y domina el tritio, se espera E2 ≈ E1; hay que confirmarlo con la ejecución.
+
+## v8 — Auditoría de los capítulos 7–12: categorías A, B y D + sensibilidad meteorológica
+
+Aplicado sobre `TFM_v8.docx` con control de cambios (`memoria/scripts/cap7_12.py`):
+
+- **Cap. 7**: área del edificio 0,01 m² (sin estela) en los parámetros de ARCON96; las zonas de la Tabla 4 se evalúan con la misma cadena; filas de la Tabla 11 al día.
+- **Cap. 9**: AZ6-RZ1 descrita con los datos reales (no es la zona máxima: puesto 3–15 de 40, +4 % Cs-137, +7 % Pu-239, +21 % Xe-133/Ba-140); «vida media» → «periodo de semidesintegración»; f = 1 (la liberación va en los AF de cada etapa del combustible); párrafo nuevo sobre el AF del edificio y los inventarios E1/E2.
+- **Cap. 10**: χ/Q en s/m³; Tabla 13; estabilidad leída por clase (ARCON96 no la calcula); ventana de direcciones y área del edificio de 0,01 m² en lugar de las categorías frontal/paralela/oblicua; periodos sin 48 h; nueve intervalos y salvaguardas del cálculo; giro de 58 m (180° y 90° antihorario = 90° horario) en el texto y en la Tabla 14; la recomendación se cambia por el caso de sensibilidad (clase F, 1 m/s).
+- **Cap. 11**: «dosis efectiva»; la ley de Henry se atribuye a Kairos y no se usa aquí; plazo de la LPZ explicado (la nube pasa antes de las 2 h de emisión).
+- **Cap. 12**: módulos, Tabla 20, escritura de ARCON96 en dos bloques, E2 en la fase 2, evaluación de las zonas de la Tabla 4, visor, sensibilidad (`sensibilidad_met.py`, SENS_F1) y verificación (cuatro errores de formato corregidos en la ejecución real; queda pendiente RADTRAD con la χ/Q corregida).
+- Textos alternativos de las figuras descriptivos; erratas.
+
+Herramienta: `sensibilidad_met.py` (MET01 de 8760 h, clase F, 1 m/s) por consola o con la casilla de la interfaz; resultados en `OUTPUT/SENS_F1`.
+
+Pendiente: velocidad máxima del viento (¿rachas o medias horarias?), ejecución en Windows (E1, E2, SENS_F1), capítulo de resultados y reescritura del capítulo 7.

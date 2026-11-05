@@ -21,13 +21,23 @@ OUT_REV = Path("/home/user/TFM/memoria/TFM_v8_revisado.docx")
 OUT_CLEAN = Path("/home/user/TFM/memoria/TFM_v8_limpia.docx")
 UN = HERE / "work_v8"
 SK = "/mnt/skills/public/docx/scripts"
-MODULES = ["cap8.py"]
+MODULES = ["cap8.py", "cap7_12.py"]
 
 shutil.rmtree(UN, ignore_errors=True)
 subprocess.run(["unzip", "-q", str(SRC), "-d", str(UN)], check=True)
 subprocess.run([sys.executable, SK + "/merge_runs.py", str(UN)], check=True, capture_output=True)
 tree = etree.parse(str(UN / "word/document.xml"))
 body = tree.getroot().find(q("body"))
+# lastRenderedPageBreak is only a layout cache; dropping it lets split w:t pieces merge
+for lr in list(body.iter(q("lastRenderedPageBreak"))):
+    lr.getparent().remove(lr)
+for r in body.iter(q("r")):
+    ts = r.findall(q("t"))
+    if len(ts) > 1 and all(c.tag in (q("rPr"), q("t")) for c in r):
+        ts[0].text = "".join(t.text or "" for t in ts)
+        ts[0].set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
+        for t in ts[1:]:
+            r.remove(t)
 # merge_runs.py can put fldChar / instrText / text of a field in one run: give each its own run again
 # (LibreOffice and some Word versions misread fields otherwise)
 for r in list(body.iter(q("r"))):
@@ -42,6 +52,20 @@ for r in list(body.iter(q("r"))):
             nr.append(copy.deepcopy(rpr))
         nr.append(c)
         r.getparent().insert(pos + k, nr)
+# consecutive w:t in one run that the split left apart (t, t) are joined by merging adjacent simple runs
+def _same_fmt(a, b):
+    ra, rb = a.find(q("rPr")), b.find(q("rPr"))
+    return (etree.tostring(ra) if ra is not None else b"") == (etree.tostring(rb) if rb is not None else b"")
+for par in list(body.iter(q("p"))):
+    kids = list(par)
+    for a, b_ in zip(kids, kids[1:]):
+        if (a.tag == q("r") and b_.tag == q("r") and a.getparent() is par and b_.getparent() is par
+                and [c.tag for c in a if c.tag != q("rPr")] == [q("t")]
+                and [c.tag for c in b_ if c.tag != q("rPr")] == [q("t")] and _same_fmt(a, b_)):
+            ta, tb = a.find(q("t")), b_.find(q("t"))
+            tb.text = (ta.text or "") + (tb.text or "")
+            tb.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
+            par.remove(a)
 C = Commenter(UN)
 WARN = []
 
