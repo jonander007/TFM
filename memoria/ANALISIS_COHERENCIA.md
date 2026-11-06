@@ -291,3 +291,10 @@ Pendiente: ejecución en Windows (E1, E2, SENS_F1), capítulo de resultados y re
 - Cap. 14: conclusión principal, apartados nuevos «Sobre las zonas de emergencia en el puerto de Bilbao» y «Sobre las condiciones de escala», herramienta, limitaciones y líneas futuras.
 - Cap. 3: Tabla 3 con los radios; sensibilidad hecha; Directriz «no proceden de una caracterización radiológica». Cap. 7: escenarios y anexos, hipótesis de punto de emisión y término fuente. Cap. 12: figura de la pestaña de mapa y verificación con los códigos reales (quinto error). Resumen, abstract y laburpena completados.
 - Anexos D (ficheros de entrada de RADTRAD: inventarios E1/E2, .rft, .psf, factores de dosis), E (χ/Q de diseño y por intervalo de las 40 distancias) y F (manual de usuario), cada uno en su sección con pie «Anexo X – n».
+
+## Versión 9 (`memoria/scripts/v9.py`, base `TFM_v8_limpia_2.docx` del autor)
+
+- Maquetación: Tablas 15 y 16 (cap. 10) eran flotantes; ahora en línea, con la leyenda encima y sin partirse. El diagrama de flujo del final del cap. 11 (sin leyenda) se redibuja (tildes, χ/Q, todas las zonas) y pasa al apartado 7.1 como Figura 6, aclarando que la herramienta lo resuelve con un barrido. Lista de criterios del AHP con los subcriterios sangrados.
+- Coherencia: resumen (ES/EN/EU) y OE6 con todas las zonas; objetivos («accidente base de diseño», no «daño al núcleo»; meteorología adaptada; sin «corredores marítimos»); Directriz y EPR-NPP (PAZ 0,5–3 km, UPZ 5–15 km para 100–1000 MWth); Tabla 4 con EAB y LPZ; sensibilidad «todas las horas»; uso de E1/E2 según la Tabla 4; cap. 8 remite a los resultados; lectura del CFD en el cap. 12 con la reconstrucción de escala; párrafo largo del mapa dividido.
+- Referencias: la Figura 3 citaba la [6] (RD 524/2023) en lugar de la [32] (Naviera Elcano); «y . et al.» en [36], [41] y [49] corregido en las fuentes; citas detrás del punto; dobles espacios.
+- Erratas y estilo: Arcon96, HERMES, i.e., «en base a», «monitoreo», «costos», «data centers», «antihoraria», «atmósferica», «Isotopo», «de el», «operadory», tiempos verbales de los caps. 10 y 11, X/Q → χ/Q, etc.
