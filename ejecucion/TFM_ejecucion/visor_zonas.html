@@ -748,7 +748,8 @@ function buildMeta(data) {
     ZMETA[z.clave] = { name: z.clave, long: z.nombre, periodo: z.periodo, magnitud: z.magnitud || "TEDE",
                        escenarios: z.escenarios || "E1", color: col };
     if (!(z.clave in S.lim)) S.lim[z.clave] = z.limite_msv;
-    if (!(z.clave in S.show)) S.show[z.clave] = ["EAB", "LPZ", "EVAC", "CONF", "PLAN"].includes(z.clave);
+    // zones ticked in the "Mapa de zonas" tab of the interface (_visibles), else the default set
+    if (!(z.clave in S.show)) S.show[z.clave] = (data._visibles || ["EAB", "LPZ", "EVAC", "CONF", "PLAN"]).includes(z.clave);
   });
   $("lims").innerHTML = Object.entries(ZMETA).map(([k, m]) =>
     `<div class="limrow"><input type="checkbox" id="sh_${k}" ${S.show[k] ? "checked" : ""} aria-label="Mostrar ${k}">

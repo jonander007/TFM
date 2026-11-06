@@ -251,3 +251,12 @@ RR("Las zonas se representan como circunferencias centradas en el buque",
    "centradas en el buque con el radio",
    "centradas en el reactor, situado a popa en la zona de máquinas (por defecto, a 28 m de la popa, en el centro "
    "de los 30–35 m de esa zona), con el radio")
+
+# Map tab of the graphical interface
+RR("El mapa se genera como página web con Leaflet",
+   "y se genera además una imagen estática para informes.",
+   "y se genera además una imagen estática para informes. La interfaz gráfica de la herramienta integra el mapa en "
+   "una pestaña propia, «Mapa de zonas», que carga los resultados de cada ejecución (caso base, con E1 y E2, y caso "
+   "de sensibilidad meteorológica), muestra los radios, permite cambiar los criterios y la posición, el rumbo y las "
+   "dimensiones del buque con una vista a escala sin conexión, y abre el mapa completo sobre OpenStreetMap o imagen de "
+   "satélite en el navegador.")

@@ -25,7 +25,7 @@ Outputs, next to the inputs:
   mapa_zonas.png          static schematic for reports (requires matplotlib)
 
 Usage:
-  python zonas_emergencia.py psf_batch/postprocess [--lat 43.353 --lon -3.086 --rumbo 300]
+  python zonas_emergencia.py psf_batch/postprocess [--lat 43.3605 --lon -3.082 --rumbo 300]
 """
 
 from __future__ import annotations
@@ -35,8 +35,11 @@ from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Dict, Optional
 
-import numpy as np
-import pandas as pd
+try:
+    import numpy as np
+    import pandas as pd
+except ImportError:          # the map tab of the interface only needs the geometry and the map writer
+    np = pd = None
 
 REM_TO_MSV = 10.0
 
@@ -202,6 +205,26 @@ def radio(env: pd.DataFrame, crit: Criterio) -> Zona:
         f = (D1 - crit.limite_msv) / (D1 - D2)
     return Zona(radio_m=float(d1 + f * (d2 - d1)), estado="interpolado", distancia_critica_m=float(d[k]),
                 set_critico=worst, **base)
+
+
+def radio_registros(registros, limite_msv: float):
+    """radio() without pandas, on the envelope stored in zonas_emergencia.json
+    ([{distance_m, dosis_msv, set_id}, …]). Returns (radio_m, estado)."""
+    pts = sorted((float(r["distance_m"]), float(r["dosis_msv"])) for r in registros)
+    if not pts:
+        return None, "sin_datos"
+    exceed = [i for i, (_, D) in enumerate(pts) if D > limite_msv]
+    if not exceed:
+        return pts[0][0], "menor_que_minimo"
+    k = exceed[-1]
+    if k == len(pts) - 1:
+        return None, "mayor_que_maximo"
+    (d1, D1), (d2, D2) = pts[k], pts[k + 1]
+    if D1 > 0 and D2 > 0:
+        f = (math.log(D1) - math.log(limite_msv)) / (math.log(D1) - math.log(D2))
+    else:
+        f = (D1 - limite_msv) / (D1 - D2)
+    return d1 + f * (d2 - d1), "interpolado"
 
 
 def _leer_escenario(postprocess: Path):

@@ -340,6 +340,22 @@ Cada ejecución genera una carpeta `RUN_N/OUTPUT/` con:
 | `99_5th_PERCENTILE_XQ_VALUES_Sector_BY_HOUR.xlsx` | X/Q al percentil 95 por hora y sector (Bridge Excel) |
 | `TOTAL_XQs_BY_HOUR.xlsx` | X/Q totales por hora |
 | `Sets_Worst2h.xlsx` | Peores 2 horas de dosis por set de fracciones de yodo |
+| `zonas_emergencia.json`, `mapa_zonas.html`, `mapa_zonas.png` | Radios de las zonas de la Tabla 4 y mapa |
+| `E2/`, `SENS_F1/` | Escenario E2 y caso de sensibilidad meteorológica |
+
+---
+
+## Pestaña «Mapa de zonas»
+
+Al terminar una ejecución la pestaña se abre con sus resultados. El selector muestra todas las
+ejecuciones (caso base y sensibilidad clase F, 1 m/s).
+
+- **Zonas:** marca las que quieras ver y cambia el límite (mSv) para recalcular el radio.
+- **Buque:** latitud, longitud y rumbo (dirección de la proa) del centro del buque, eslora, manga y
+  distancia del reactor a la popa. Las zonas se centran en el reactor.
+- **Vista a escala:** sin conexión; rueda para el zoom, arrastrar para mover, doble clic para ajustar.
+- **Abrir mapa en el navegador:** guarda los cambios y abre el mapa sobre OpenStreetMap o satélite.
+- **Guardar buque y criterios:** reescribe `zonas_emergencia.json`, `mapa_zonas.html` y `mapa_zonas.png`.
 
 ---
 
@@ -1989,6 +2005,11 @@ class PipelineGUI(tk.Frame):
                 self.status.set_idle("✓ Completado")
                 self.log.append("", "INFO")
                 self.log.append("✓ COMPLETADO", "SUCCESS")
+                if getattr(self, "on_run_finished", None):
+                    try:
+                        self.on_run_finished(True)      # map tab: load the new results
+                    except Exception as e:
+                        self.log.append(f"Mapa de zonas: {e}", "WARN")
             else:
                 self.status.set_idle("✗ Error")
                 self.log.append("", "INFO")
@@ -3567,7 +3588,7 @@ class PSFContent(PSFApp):
 class RADTRADApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("RADTRAD Tool  —  Pipeline + Generador PSF")
+        self.title("RADTRAD Tool  —  Pipeline + Generador PSF + Mapa de zonas")
         self.configure(bg=BG_APP)
         self.geometry("1150x900")
         self.minsize(960, 680)
@@ -3604,7 +3625,7 @@ class RADTRADApp(tk.Tk):
                  bg=BG_CARD, fg=TEXT,
                  font=("Segoe UI Semibold", 14)).pack(anchor="w")
         tk.Label(tf,
-                 text="ARCON96 + RADTRAD Pipeline  ·  Generador PSF  ·  IDOM 2025",
+                 text="ARCON96 + RADTRAD Pipeline  ·  Generador PSF  ·  Mapa de zonas  ·  IDOM 2025",
                  bg=BG_CARD, fg=MUTED, font=("Segoe UI", 8)).pack(anchor="w")
         tk.Button(bar, text="?  Ayuda", bg=BG_INPUT, fg=BLUE,
                   activebackground=BLUE, activeforeground=WHITE,
@@ -3634,6 +3655,19 @@ class RADTRADApp(tk.Tk):
         tab2 = tk.Frame(nb, bg=BG_APP)
         nb.add(tab2, text="  Generador PSF  ")
         PSFContent(tab2).pack(fill="both", expand=True)
+
+        # Emergency zone map: native view to scale + full map in the browser (mapa_tab.py)
+        tab3 = tk.Frame(nb, bg=BG_APP)
+        nb.add(tab3, text="  Mapa de zonas  ")
+        try:
+            from mapa_tab import MapaZonasTab
+            self.mapa_tab = MapaZonasTab(tab3, SCRIPT_DIR)
+            self.mapa_tab.pack(fill="both", expand=True)
+            self._pipeline_content.on_run_finished = (
+                lambda ok: (self.mapa_tab.refrescar(seleccionar_ultimo=True), ok and nb.select(tab3)))
+        except Exception as e:
+            tk.Label(tab3, text=f"No se pudo cargar el mapa de zonas (mapa_tab.py):\n{e}",
+                     bg=BG_APP, fg=RED, font=FONT_UI, justify="left").pack(padx=20, pady=20, anchor="w")
 
         # Conectar el botón "Abrir Generador PSF" del PsfWidget con el notebook
         try:
