@@ -200,8 +200,15 @@ RR("La herramienta se ha verificado con ejecutables sustitutos",
    "dos bloques con su propia columna de χ/Q (los percentiles calculados coinciden ahora con los de su fichero de "
    "registro); la tabla de χ/Q del .psf no seguía el formato de columnas que lee RADTRAD, que perdía los exponentes y "
    "multiplicaba la dosis; y el fichero de factores de dosis no listaba los nucleidos en el mismo orden que el "
-   "inventario, mientras que RADTRAD los asigna por posición. ARCON96 se ejecutó correctamente con los cinco años de "
-   "datos; queda pendiente la ejecución completa de RADTRAD con la tabla de χ/Q corregida.")
+   "inventario, mientras que RADTRAD los asigna por posición. La ejecución completa reveló un quinto error, también "
+   "corregido: ARCON96 fija el rango de la distribución acumulada de χ/Q para cada periodo de promediado, pero en el "
+   "fichero de distribución escribe la columna de χ/Q de un solo periodo, de modo que, cuando el máximo de 12 h bajaba "
+   "una década, el percentil 99,5 de 12 a 720 h salía diez veces mayor. La herramienta reconstruye ahora la escala de "
+   "cada periodo con los límites del fichero de registro y comprueba en cada caso que el percentil 95 que obtiene "
+   "coincide con el que calcula ARCON96. Con los códigos reales, la TEDE dividida por el χ/Q de 0–2 h es la misma en "
+   "las 40 distancias calculadas (1418 mSv·m³/s, con una dispersión del 0,01 %) y coincide con el cálculo manual a "
+   "partir del inventario y de los factores de dosis (capítulo @REFN:_RefCap_res|13@), lo que verifica que RADTRAD lee "
+   "el χ/Q, el inventario y los factores de dosis como se pretende.")
 
 # ================================================================ alt text ==
 _WPD = "{http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing}"

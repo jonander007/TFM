@@ -21,7 +21,7 @@ OUT_REV = Path("/home/user/TFM/memoria/TFM_v8_revisado.docx")
 OUT_CLEAN = Path("/home/user/TFM/memoria/TFM_v8_limpia.docx")
 UN = HERE / "work_v8"
 SK = "/mnt/skills/public/docx/scripts"
-MODULES = ["cap8.py", "cap7_12.py"]
+MODULES = ["cap8.py", "cap7_12.py", "cap13.py"]
 
 shutil.rmtree(UN, ignore_errors=True)
 subprocess.run(["unzip", "-q", str(SRC), "-d", str(UN)], check=True)
