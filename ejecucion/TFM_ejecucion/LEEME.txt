@@ -10,7 +10,7 @@ QUÉ HAY
   zonas_emergencia.py    Radios de las zonas de la Tabla 4 (EAB, LPZ, medidas urgentes; E1 y E2) y mapa.
   visor_zonas.html       Plantilla del mapa (Leaflet). El resultado se escribe en psf_batch\postprocess.
   vendor\leaflet\        Leaflet 1.9.4 (librería libre del mapa), incluida en el proyecto.
-  mapa_tab.py            Pestaña «Mapa de zonas» de la interfaz (vista a escala + mapa en el navegador).
+  mapa_tab.py            Pestaña «Mapa de zonas» de la interfaz (mapa de Bilbao con las zonas y coordenadas).
   ver_mapa.py, VER_MAPA.bat   Abren el mapa en http://localhost con el fondo de OpenStreetMap.
   template_kpfhr.psf     Escenario de RADTRAD: emisión directa al ambiente, 320 MWth.
   MET01.MET … MET05.MET  Meteorología horaria preparada para ARCON96 (10 m y 58 m).
@@ -38,8 +38,11 @@ CÓMO EJECUTAR CON LA INTERFAZ GRÁFICA (recomendado)
   4. Cada ejecución crea RUN_N\: INPUT_USED (copia de los datos), WORK (casos de ARCON96 y
      RADTRAD) y OUTPUT (χ/Q, Sets_Worst2h.xlsx, zonas_emergencia.json, mapa y pipeline.log).
   5. Al terminar se abre la pestaña «Mapa de zonas» con los resultados: radios, criterios
-     editables, buque y reactor a escala, y el botón «Abrir mapa en el navegador» (OpenStreetMap
-     o satélite). El selector permite pasar al caso de sensibilidad y a ejecuciones anteriores.
+     editables y el mapa de Bilbao (OpenStreetMap, callejero o satélite) con el buque, el reactor
+     y las zonas a escala, la cuadrícula de coordenadas y la latitud y longitud del cursor.
+     Clic derecho sobre el mapa sitúa el buque; «Guardar buque y criterios» lo graba. Necesita
+     internet para descargar el mapa (se guarda en cache_teselas\); sin conexión dibuja las
+     zonas sin fondo. El botón «Abrir mapa en el navegador» abre además el visor web. El selector permite pasar al caso de sensibilidad y a ejecuciones anteriores.
      VER_MAPA.bat sigue abriendo el mapa más reciente sin la interfaz.
   La pestaña «Generador PSF» crea plantillas nuevas: pide volúmenes en m³, caudales en m³/s y
   fugas en 1/s, y los escribe en las unidades de RADTRAD (ft³, cfm, %/día).

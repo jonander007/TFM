@@ -257,6 +257,7 @@ RR("El mapa se genera como página web con Leaflet",
    "y se genera además una imagen estática para informes.",
    "y se genera además una imagen estática para informes. La interfaz gráfica de la herramienta integra el mapa en "
    "una pestaña propia, «Mapa de zonas», que carga los resultados de cada ejecución (caso base, con E1 y E2, y caso "
-   "de sensibilidad meteorológica), muestra los radios, permite cambiar los criterios y la posición, el rumbo y las "
-   "dimensiones del buque con una vista a escala sin conexión, y abre el mapa completo sobre OpenStreetMap o imagen de "
-   "satélite en el navegador.")
+   "de sensibilidad meteorológica), muestra los radios y dibuja el buque, el reactor y las zonas sobre la "
+   "cartografía de OpenStreetMap o la imagen de satélite, con las coordenadas del cursor y una cuadrícula de latitud y "
+   "longitud; en ella pueden cambiarse los criterios y la posición, el rumbo y las dimensiones del buque, y abrirse el "
+   "mapa completo en el navegador.")

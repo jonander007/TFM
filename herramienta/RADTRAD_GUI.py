@@ -353,7 +353,10 @@ ejecuciones (caso base y sensibilidad clase F, 1 m/s).
 - **Zonas:** marca las que quieras ver y cambia el límite (mSv) para recalcular el radio.
 - **Buque:** latitud, longitud y rumbo (dirección de la proa) del centro del buque, eslora, manga y
   distancia del reactor a la popa. Las zonas se centran en el reactor.
-- **Vista a escala:** sin conexión; rueda para el zoom, arrastrar para mover, doble clic para ajustar.
+- **Mapa:** buque, reactor y zonas a escala sobre OpenStreetMap, callejero o satélite de Esri (o sin
+  mapa), con cuadrícula de latitud y longitud y las coordenadas del cursor (decimal y grados,
+  minutos y segundos) y su distancia al reactor. Rueda: zoom; arrastrar: mover; clic derecho:
+  situar ahí el centro del buque; doble clic: ajustar. Las teselas se guardan en `cache_teselas/`.
 - **Abrir mapa en el navegador:** guarda los cambios y abre el mapa sobre OpenStreetMap o satélite.
 - **Guardar buque y criterios:** reescribe `zonas_emergencia.json`, `mapa_zonas.html` y `mapa_zonas.png`.
 
