@@ -298,3 +298,9 @@ Pendiente: ejecución en Windows (E1, E2, SENS_F1), capítulo de resultados y re
 - Coherencia: resumen (ES/EN/EU) y OE6 con todas las zonas; objetivos («accidente base de diseño», no «daño al núcleo»; meteorología adaptada; sin «corredores marítimos»); Directriz y EPR-NPP (PAZ 0,5–3 km, UPZ 5–15 km para 100–1000 MWth); Tabla 4 con EAB y LPZ; sensibilidad «todas las horas»; uso de E1/E2 según la Tabla 4; cap. 8 remite a los resultados; lectura del CFD en el cap. 12 con la reconstrucción de escala; párrafo largo del mapa dividido.
 - Referencias: la Figura 3 citaba la [6] (RD 524/2023) en lugar de la [32] (Naviera Elcano); «y . et al.» en [36], [41] y [49] corregido en las fuentes; citas detrás del punto; dobles espacios.
 - Erratas y estilo: Arcon96, HERMES, i.e., «en base a», «monitoreo», «costos», «data centers», «antihoraria», «atmósferica», «Isotopo», «de el», «operadory», tiempos verbales de los caps. 10 y 11, X/Q → χ/Q, etc.
+
+## Versión 10 (`memoria/scripts/v10.py`, base `TFM_JGL.docx` del autor)
+
+- Tablas: las 37 tablas de datos con el mismo formato (fuente del documento a 9 pt —8 pt en las Tablas 34 y 35, de 10 y 11 columnas—, cabecera 1F3864 con texto blanco en negrita repetida, cuerpo negro sin negrita salvo las filas de categoría sombreadas, interlineado sencillo, márgenes 60/90, bordes 999999, alineación vertical centrada, texto a la izquierda y valores numéricos centrados). Excluidas la bibliografía y el listado del .psf. Anchos corregidos en las Tablas 11, 15 y 25 (palabras partidas) y línea en blanco tras las Tablas 15 y 16.
+- Notación X/Q del autor: restos del reemplazo (XX/Q, XXX/Q, «(, en Bq/m³», TEDE/Q, TEDE/X/Q), ecuaciones y Figuras 6 y 17 pasadas a X/Q.
+- Otros: IAEA → OIEA en la Tabla 25, «input» en la Figura 15, m3 → m³ en el Anexo B.
