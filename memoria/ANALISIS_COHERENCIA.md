@@ -304,3 +304,10 @@ Pendiente: ejecución en Windows (E1, E2, SENS_F1), capítulo de resultados y re
 - Tablas: las 37 tablas de datos con el mismo formato (fuente del documento a 9 pt —8 pt en las Tablas 34 y 35, de 10 y 11 columnas—, cabecera 1F3864 con texto blanco en negrita repetida, cuerpo negro sin negrita salvo las filas de categoría sombreadas, interlineado sencillo, márgenes 60/90, bordes 999999, alineación vertical centrada, texto a la izquierda y valores numéricos centrados). Excluidas la bibliografía y el listado del .psf. Anchos corregidos en las Tablas 11, 15 y 25 (palabras partidas) y línea en blanco tras las Tablas 15 y 16.
 - Notación X/Q del autor: restos del reemplazo (XX/Q, XXX/Q, «(, en Bq/m³», TEDE/Q, TEDE/X/Q), ecuaciones y Figuras 6 y 17 pasadas a X/Q.
 - Otros: IAEA → OIEA en la Tabla 25, «input» en la Figura 15, m3 → m³ en el Anexo B.
+
+## Versión 11 (`memoria/scripts/v11.py`, segunda pasada sobre `TFM_JGL.docx`, tras v10.py)
+
+- Todas las tablas y figuras se citan en el texto (faltaban las Tablas 1, 2, 9, 10, 14, 15 y 18 y las Figuras 3 y 14).
+- Siglas: añadidas EPR-NPP, GSR, HT/HTO, INL, JFD, MCNP, OPSMAN, PAVAN, PENAR, SCRAM, SMART, SNAP y TFM; eliminada DBA (sin uso).
+- Coherencia: MWth/MWe/MWt → MWₜₕ/MWₑ; punto de miles (1.000 MWₜₕ, 1.418 mSv·m³/s, 6.368 Ci, Tabla 22); «puerto de Bilbao», «Directriz básica», «zona de baja población», «límite del área de exclusión» y «sala de control» en minúscula; «Kairos» → «Kairos Power».
+- Comprobado: las 49 referencias bibliográficas se citan y tienen fuente; las referencias [28], [34] y [46] no tienen año (pendiente del autor).
