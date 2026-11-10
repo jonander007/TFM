@@ -104,8 +104,8 @@ CRITERIOS = {
     "CONF": Criterio("CONF", "Medidas urgentes: confinamiento", 10.0, "48 h", "#2471a3", "TEDE", 48.0, "E1+E2"),
     "YODO": Criterio("YODO", "Profilaxis con yodo (tiroides)", 100.0, "7 días", "#16a085", "Tiroides", 168.0, "E1+E2"),
     "PLAN": Criterio("PLAN", "Zona de planificación de emergencias", 10.0, "96 h", "#7f8c8d", "TEDE", 96.0, "E1+E2"),
-    "DETM": Criterio("DETM", "Efectos deterministas: médula (1 Gy, aprox. con TEDE)", 1000.0, "48 h", "#000000", "TEDE", 48.0, "E2"),
-    "DETT": Criterio("DETT", "Efectos deterministas: tiroides (5 Gy)", 5000.0, "48 h", "#5d4037", "Tiroides", 48.0, "E2"),
+    "DETM": Criterio("DETM", "Indicador de cribado: TEDE 48 h ≥ 1000 mSv (no es dosis absorbida en médula)", 1000.0, "48 h", "#000000", "TEDE", 48.0, "E2"),
+    "DETT": Criterio("DETT", "Indicador de cribado: tiroides 48 h ≥ 5000 mSv (no es dosis absorbida)", 5000.0, "48 h", "#5d4037", "Tiroides", 48.0, "E2"),
 }
 
 

@@ -311,3 +311,13 @@ Pendiente: ejecución en Windows (E1, E2, SENS_F1), capítulo de resultados y re
 - Siglas: añadidas EPR-NPP, GSR, HT/HTO, INL, JFD, MCNP, OPSMAN, PAVAN, PENAR, SCRAM, SMART, SNAP y TFM; eliminada DBA (sin uso).
 - Coherencia: MWth/MWe/MWt → MWₜₕ/MWₑ; punto de miles (1.000 MWₜₕ, 1.418 mSv·m³/s, 6.368 Ci, Tabla 22); «puerto de Bilbao», «Directriz básica», «zona de baja población», «límite del área de exclusión» y «sala de control» en minúscula; «Kairos» → «Kairos Power».
 - Comprobado: las 49 referencias bibliográficas se citan y tienen fuente; las referencias [28], [34] y [46] no tienen año (pendiente del autor).
+
+## v12 · Revisión técnica externa
+
+Se han aplicado las correcciones P0–P2 de la revisión externa; el detalle está en `registro_cambios_v12.md`.
+
+- **Magnitudes:** ningún umbral en Gy se compara ya con la TEDE en mSv. Las filas deterministas de la Tabla 24 figuran como «No evaluado», con una cota de < 0,1 Gy en el capítulo 13.
+- **Directriz básica (100/200 m):** se usa solo como referencia geométrica, porque son zonas definidas por tasa de dosis.
+- **E2:** pasa a ser una sensibilidad a la pérdida de retención del edificio, con una nueva Tabla 12 de escenarios.
+- **Kairos Power:** el factor pasa a × 49 (4,918·10⁻³ / 1,006·10⁻⁴ s/m³), con radios de 48 / 112 / 271 m.
+- **Profilaxis con yodo:** radio ≈ 10 m (cruce estimado en 10,2 m), pendiente de verificar con la serie temporal de la dosis a tiroides.
