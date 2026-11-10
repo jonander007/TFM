@@ -72,3 +72,28 @@ Estados: **corregido** (redacción o criterio), **recalculado y verificado** (ci
 
 - **Resúmenes y Tablas 24–25:** los tres resúmenes dan ≤ 10 m (EAB/LPZ), 15 m (evacuación), 34 m (confinamiento y planificación) y 22/48 m con clase F. Son los valores de las Tablas 24 y 25. Ninguno menciona el yodo ni los efectos deterministas.
 - **Gy frente a mSv:** se han revisado todas las apariciones de «Gy» en el texto limpio. Quedan solo en la enumeración de umbrales de la Directriz (cap. 3), en la fila «Dosis absorbida por órgano» de la Tabla 4, en la nota de magnitudes, en la cota del cap. 13 y en las filas «No evaluado» de la Tabla 24. Ninguna compara un umbral en Gy con la TEDE en mSv.
+
+---
+
+# v13 · Repaso final para la entrega en PDF
+
+Salidas: `TFM_v13.pdf` (documento de entrega), `TFM_v13_limpia.docx` y `TFM_v13_revisado.docx`.
+
+| Ubicación | Cambio | Motivo | Estado |
+|---|---|---|---|
+| Cap. 9 | «En la Tabla 13 se muestra… la sección» → Figura 7 | La renumeración de v12 había cambiado la referencia; comprobadas las 145 referencias cruzadas | corregido |
+| Cap. 9 | Figura 7 en línea, antes de la Tabla 13 (antes flotaba a su lado) | El pie pisaba el número de página | corregido |
+| Cap. 10 | Figura 15 y su pie en línea | La imagen se salía por el pie de página | corregido |
+| Caps. 6, 7, 9, 10, 11, 12 | 19 arreglos en las fórmulas: palabras con tilde, Q̇, DCF, m³, fórmulas en párrafo propio, T₁/₂ | No se dibujaban bien al exportar | corregido |
+| Todo el documento | Quitado el resaltado amarillo y el texto en rojo (16 restos) | Restos de edición | corregido |
+| Títulos | Más espacio tras la numeración («10.1Conceptos» → «10.1 Conceptos») | Capítulos de dos cifras | corregido |
+| Caps. 1–14 | Erratas y redacción: «de la combinación energética», «inventario isotópico», «zonas de emergencia», «fiables», «overlying pool», «necesario abordar», comillas « », 7,16 mSv, «cualquier ventana de 2 horas» | Coherencia | corregido |
+| Cap. 13 | «unos 101 mSv a tiroides a 10 m en E1 y 103 mSv en E2»; sin repetir «≤ 10 m» | Claridad | corregido |
+| Cap. 14 | «cinco errores del procedimiento inicial», como en el capítulo 12 (antes «dos» y «otros tres») | Coherencia | corregido |
+| Cap. 11, Anexos B, D y E | Quitadas las rutas a ficheros y carpetas que no acompañan al PDF | Solo se entrega el PDF | corregido |
+| Cap. 12 | Párrafos nuevos: tipo de instalación (embarcación o planta terrestre) y alcance del generador de escenarios; el código no forma parte del documento | Herramienta actualizada | corregido |
+| Anexo F | Manual actualizado (tipo de instalación, barra del generador, «Usar en el cálculo», «Guardar posición y criterios») y Figuras 22 y 23 nuevas | Herramienta actualizada | corregido |
+| Bibliografía | [46] NUREG-0800 2.3.3, Rev. 3, 2007; [34] «s. f.» | Faltaba el año | corregido; [28] sigue sin año |
+| PDF | Índice, lista de figuras y lista de tablas con las páginas reales; anexos como A-1, B-2…; marcadores, título y autor | Entrega en PDF | corregido |
+
+El PDF se genera con `scripts/export_pdf.py` (LibreOffice). La Figura 16 conserva la captura anterior del mapa, en la que el panel se llamaba «Buque»; el texto lo indica.
