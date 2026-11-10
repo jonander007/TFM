@@ -199,6 +199,8 @@ class MapaZonasTab(tk.Frame):
         self.zone_vars = {}         # clave -> (show BooleanVar, limit StringVar, radius Label)
         self._drag = None
         self.v = {k: tk.StringVar() for k in ("lat", "lon", "rumbo", "eslora", "manga", "popa")}
+        self.tipo = tk.StringVar(value="buque")     # "buque" | "terrestre" (ZE.INSTALACIONES)
+        self._ship_entries = {}
         self._build()
         self.refrescar()
 
@@ -234,7 +236,12 @@ class MapaZonasTab(tk.Frame):
                  bg=BG_CARD, fg=MUTED, font=FONT_SM, wraplength=380, justify="left").pack(fill="x", pady=(6, 0))
 
         # ship
-        card = self._card(left, "Buque")
+        card = self._card(left, "Instalación")
+        row = tk.Frame(card, bg=BG_CARD); row.pack(fill="x", pady=(0, 6))
+        for val, txt in (("buque", "Embarcación"), ("terrestre", "Planta terrestre")):
+            tk.Radiobutton(row, text=txt, variable=self.tipo, value=val, bg=BG_CARD, fg=TEXT, font=FONT_SM,
+                           activebackground=BG_CARD, selectcolor=BG_CARD,
+                           command=self._cambiar_tipo).pack(side="left", padx=(0, 12))
         grid = tk.Frame(card, bg=BG_CARD); grid.pack(fill="x")
         fields = (("lat", "Latitud"), ("lon", "Longitud"), ("rumbo", "Rumbo (°)"),
                   ("eslora", "Eslora (m)"), ("manga", "Manga (m)"), ("popa", "Reactor a popa (m)"))
@@ -244,19 +251,21 @@ class MapaZonasTab(tk.Frame):
             e.grid(row=(i // 3) * 2 + 1, column=i % 3, sticky="we", padx=3, pady=(0, 6), ipady=3)
             e.bind("<Return>", lambda ev: self.dibujar())
             e.bind("<FocusOut>", lambda ev: self.dibujar())
+            self._ship_entries[k] = e
         for c in range(3):
             grid.columnconfigure(c, weight=1)
         row = tk.Frame(card, bg=BG_CARD); row.pack(fill="x", pady=(2, 0))
-        self._btn(row, "Atraque por defecto (BBG)", self._atraque_defecto, small=True).pack(side="left")
-        tk.Label(card, text="Rumbo = dirección de la proa. Las zonas se centran en el reactor. La posición por defecto "
-                            "es aproximada: ajústala sobre el satélite en el mapa del navegador.",
-                 bg=BG_CARD, fg=MUTED, font=FONT_SM, wraplength=380, justify="left").pack(fill="x", pady=(6, 0))
+        self.btn_atraque = self._btn(row, "Atraque por defecto (BBG)", self._atraque_defecto, small=True)
+        self.btn_atraque.pack(side="left")
+        self.inst_hint = tk.Label(card, text="", bg=BG_CARD, fg=MUTED, font=FONT_SM, wraplength=380, justify="left")
+        self.inst_hint.pack(fill="x", pady=(6, 0))
+        self._estado_tipo()
 
         # actions
         card = self._card(left, "Mapa")
         self._btn(card, "🌍  Abrir mapa en el navegador (OpenStreetMap / satélite)", self.abrir_navegador).pack(fill="x")
         row = tk.Frame(card, bg=BG_CARD); row.pack(fill="x", pady=(6, 0))
-        self._btn(row, "Guardar buque y criterios", self.guardar, small=True).pack(side="left", fill="x", expand=True)
+        self._btn(row, "Guardar posición y criterios", self.guardar, small=True).pack(side="left", fill="x", expand=True)
         self._btn(row, "Exportar PNG…", self.exportar_png, small=True).pack(side="left", fill="x", expand=True, padx=(6, 0))
         self.msg = tk.Label(card, text="", bg=BG_CARD, fg=MUTED, font=FONT_SM, wraplength=380, justify="left")
         self.msg.pack(fill="x", pady=(6, 0))
@@ -269,7 +278,7 @@ class MapaZonasTab(tk.Frame):
         cb.pack(side="left", pady=4)
         cb.bind("<<ComboboxSelected>>", lambda e: (setattr(self.teselas, "fallos", 0), self.dibujar()))
         self._btn(top, "Ajustar", self._ajustar, small=True).pack(side="right", padx=8, pady=4)
-        tk.Label(top, text="rueda: zoom · arrastrar: mover · clic derecho: situar el buque",
+        tk.Label(top, text="rueda: zoom · arrastrar: mover · clic derecho: situar el buque o la planta",
                  bg=BG_CARD, fg=MUTED, font=FONT_SM).pack(side="right")
         self.cv = tk.Canvas(right, bg=SEA, highlightthickness=0)
         self.cv.pack(fill="both", expand=True)
@@ -341,6 +350,11 @@ class MapaZonasTab(tk.Frame):
             messagebox.showerror("Mapa de zonas", f"No se puede leer {js}:\n{e}")
             return
         self.data, self.folder = data, js.parent
+        self.tipo.set(ZE.tipo_instalacion(data))
+        if self.tipo.get() == "terrestre":           # no hull in the json: keep the reference ship in the boxes
+            data = dict(data, rumbo=ZE.DEFAULT_HEADING, eslora_m=ZE.SHIP_LENGTH_M, manga_m=ZE.SHIP_BEAM_M,
+                        reactor_desde_popa_m=ZE.REACTOR_FROM_STERN_M)
+        self._estado_tipo()
         self.v["lat"].set(f"{data.get('lat', ZE.DEFAULT_LAT):.5f}")
         self.v["lon"].set(f"{data.get('lon', ZE.DEFAULT_LON):.5f}")
         self.v["rumbo"].set(f"{data.get('rumbo', ZE.DEFAULT_HEADING):g}")
@@ -352,6 +366,7 @@ class MapaZonasTab(tk.Frame):
             info.append(f"{data['n_sets']} juegos de fracciones de yodo")
         if data.get("escenarios"):
             info.append("escenarios " + " y ".join(data["escenarios"]))
+        info.append(ZE.INSTALACIONES[self.tipo.get()]["nombre"].lower())
         info += data.get("avisos", [])
         self.src_info.config(text=" · ".join(info))
         self._zonas_ui()
@@ -390,7 +405,31 @@ class MapaZonasTab(tk.Frame):
         except ValueError:
             return default
 
+    def _estado_tipo(self):
+        """Enable the ship boxes only for a ship and explain what lat/lon mean."""
+        buque = self.tipo.get() == "buque"
+        for k in ("rumbo", "eslora", "manga", "popa"):
+            self._ship_entries[k].config(state="normal" if buque else "disabled")
+        self.btn_atraque.config(state="normal" if buque else "disabled")
+        self.inst_hint.config(text=(
+            "Latitud y longitud del centro del buque. Rumbo = dirección de la proa. Las zonas se centran en el "
+            "reactor, a popa. La posición por defecto es aproximada: ajústala sobre el satélite en el mapa del "
+            "navegador." if buque else
+            "Latitud y longitud del reactor de la planta: las zonas se centran en ese punto, sin casco ni rumbo. "
+            "Clic derecho en el mapa para situarlo."))
+
+    def _cambiar_tipo(self):
+        self._estado_tipo()
+        if self.data:                                # zones shown by default for the installation type
+            vis = ZE.INSTALACIONES[self.tipo.get()]["visibles"]
+            for k, (show, _, _) in self.zone_vars.items():
+                show.set(k in vis)
+        self._ajustar()
+
     def buque(self):
+        if self.tipo.get() == "terrestre":           # reactor = the point given; no hull
+            return dict(lat=self._num("lat", ZE.DEFAULT_LAT), lon=self._num("lon", ZE.DEFAULT_LON),
+                        rumbo=0.0, eslora=0.0, manga=0.0, popa=0.0)
         return dict(lat=self._num("lat", ZE.DEFAULT_LAT), lon=self._num("lon", ZE.DEFAULT_LON),
                     rumbo=self._num("rumbo", ZE.DEFAULT_HEADING) % 360,
                     eslora=max(1.0, self._num("eslora", ZE.SHIP_LENGTH_M)),
@@ -447,7 +486,7 @@ class MapaZonasTab(tk.Frame):
         return self._inv(cx + sx - self.cv.winfo_width() / 2, cy + sy - self.cv.winfo_height() / 2, self.z)
 
     def _rango(self, zs, b):
-        return max([b["eslora"]] + [r for _, r, _, s in zs if r and s]) * 1.1
+        return max([b["eslora"], 50.0] + [r for _, r, _, s in zs if r and s]) * 1.1
 
     def _ajustar(self):
         """Centre on the reactor with the ship and the visible zones in view."""
@@ -485,8 +524,10 @@ class MapaZonasTab(tk.Frame):
     def _situar_buque(self, ev):
         lat, lon = self._latlon(ev.x, ev.y)
         self.v["lat"].set(f"{lat:.5f}"); self.v["lon"].set(f"{lon:.5f}")
-        self.msg.config(text=f"Centro del buque situado en {lat:.5f}, {lon:.5f}. Ajusta el rumbo y pulsa "
-                             "«Guardar buque y criterios».")
+        self.msg.config(text=(f"Reactor de la planta situado en {lat:.5f}, {lon:.5f}. Pulsa «Guardar posición y "
+                              "criterios»." if self.tipo.get() == "terrestre" else
+                              f"Centro del buque situado en {lat:.5f}, {lon:.5f}. Ajusta el rumbo y pulsa "
+                              "«Guardar posición y criterios»."))
         self.dibujar()
 
     @staticmethod
@@ -606,13 +647,16 @@ class MapaZonasTab(tk.Frame):
             cv.create_text(32, y + 5, text=txt, anchor="w", font=FONT_SM, fill=TEXT, tags="ley")
             y += 18
         cv.create_oval(12, y + 1, 22, y + 11, fill=REACTOR, outline="#000", tags="ley")
-        cv.create_text(32, y + 6, text=f"Reactor ({b['popa']:g} m de la popa): {rl:.5f}, {ro:.5f}",
+        terrestre = self.tipo.get() == "terrestre"
+        cv.create_text(32, y + 6, text=(f"Reactor (planta terrestre): {rl:.5f}, {ro:.5f}" if terrestre else
+                                        f"Reactor ({b['popa']:g} m de la popa): {rl:.5f}, {ro:.5f}"),
                        anchor="w", font=FONT_SM, fill=TEXT, tags="ley")
-        y += 18
-        cv.create_rectangle(10, y + 1, 26, y + 9, fill=HULL, outline=HULL, tags="ley")
-        cv.create_text(32, y + 5, text=f"Buque {b['eslora']:g} × {b['manga']:g} m, rumbo {b['rumbo']:g}°: "
-                                       f"{b['lat']:.5f}, {b['lon']:.5f}",
-                       anchor="w", font=FONT_SM, fill=TEXT, tags="ley")
+        if not terrestre:
+            y += 18
+            cv.create_rectangle(10, y + 1, 26, y + 9, fill=HULL, outline=HULL, tags="ley")
+            cv.create_text(32, y + 5, text=f"Buque {b['eslora']:g} × {b['manga']:g} m, rumbo {b['rumbo']:g}°: "
+                                           f"{b['lat']:.5f}, {b['lon']:.5f}",
+                           anchor="w", font=FONT_SM, fill=TEXT, tags="ley")
         x1, y1, x2, y2 = cv.bbox("ley")
         bg = cv.create_rectangle(x1 - 6, y1 - 5, x2 + 8, y2 + 5, fill=BG_CARD, outline=BORDER)
         cv.tag_lower(bg, "ley")
@@ -633,7 +677,7 @@ class MapaZonasTab(tk.Frame):
         cv.create_text(W - 30, 53, text="N", font=FONT_BOLD, fill=TEXT)
         aviso = []
         if not self.data:
-            aviso.append("Sin resultados cargados: se muestra solo el buque")
+            aviso.append("Sin resultados cargados: se muestra solo " + ("el reactor" if terrestre else "el buque"))
         if capa and faltan and self.teselas.sin_conexion:
             aviso.append("Sin conexión con el servidor de mapas: se muestran solo las zonas a escala")
         elif capa and capa.get("jpg") and not Teselas.PIL:
@@ -648,7 +692,10 @@ class MapaZonasTab(tk.Frame):
         b = self.buque()
         rl, ro = ZE.posicion_reactor(b["lat"], b["lon"], b["rumbo"], b["eslora"], b["popa"])
         res = dict(self.data, lat=b["lat"], lon=b["lon"], rumbo=b["rumbo"], eslora_m=b["eslora"],
-                   manga_m=b["manga"], reactor_desde_popa_m=b["popa"], reactor_lat=rl, reactor_lon=ro)
+                   manga_m=b["manga"], reactor_desde_popa_m=b["popa"], reactor_lat=rl, reactor_lon=ro,
+                   instalacion=self.tipo.get())
+        if self.tipo.get() == "terrestre":
+            res.update(buque=ZE.INSTALACIONES["terrestre"]["nombre"], atraque="Emplazamiento terrestre")
         zonas, visibles = [], []
         for z, r, est, show in self.zonas():
             zonas.append(dict(z, radio_m=r, estado=est))

@@ -55,6 +55,23 @@ SHIP_NAME = "Metanero de referencia (284,4 × 42,5 m)"
 # that space measured from the stern; the zones are centred there, not amidships.
 REACTOR_FROM_STERN_M = 28.0
 
+# Type of installation. "buque": reactor on board, the zones are centred on the reactor (aft) and the
+# hull is drawn to scale with its heading. "terrestre": land plant, the zones are centred on the
+# given point (the reactor building) and there is no hull, heading or berth.
+INSTALACIONES = {
+    "buque": dict(nombre="Embarcación (reactor a bordo)", titulo="Zonas de emergencia del buque",
+                  visibles=["EAB", "LPZ", "EVAC", "CONF", "PLAN"], dist=(10, 400, 10)),
+    "terrestre": dict(nombre="Planta terrestre", titulo="Zonas de emergencia de la planta",
+                      visibles=["EAB", "LPZ", "PLAN"], dist=(50, 1200, 50)),
+}
+
+
+def tipo_instalacion(v) -> str:
+    """'buque' or 'terrestre' from a parameter or a results dict (old results have no key: ship)."""
+    if isinstance(v, dict):
+        v = v.get("instalacion")
+    return "terrestre" if str(v or "").lower().startswith("terr") else "buque"
+
 
 def reactor_y(eslora: float = SHIP_LENGTH_M, desde_popa: float = REACTOR_FROM_STERN_M) -> float:
     """Position of the reactor along the ship axis, from amidships (negative = aft), metres."""
@@ -323,7 +340,7 @@ def escribir_mapa(resultado: Dict, html: Path, fuente: str = "") -> Path:
     return html
 
 
-def escribir_png(resultado: Dict, png: Path, titulo: str = "Zonas de emergencia — Puerto de Bilbao") -> Optional[Path]:
+def escribir_png(resultado: Dict, png: Path, titulo: str = "") -> Optional[Path]:
     """Static schematic (local metres, north up) for reports; skipped without matplotlib."""
     try:
         import matplotlib
@@ -333,6 +350,8 @@ def escribir_png(resultado: Dict, png: Path, titulo: str = "Zonas de emergencia 
     except ImportError:
         logging.warning("matplotlib not installed: mapa_zonas.png not written")
         return None
+    titulo = titulo or ("Zonas de emergencia — Planta terrestre" if tipo_instalacion(resultado) == "terrestre"
+                        else "Zonas de emergencia — Puerto de Bilbao")
     zonas = [z for z in resultado["zonas"] if z["radio_m"] is not None]
     R = max([z["radio_m"] for z in zonas] + [resultado.get("eslora_m", SHIP_LENGTH_M)]) * 1.1
     fig, ax = plt.subplots(figsize=(6.5, 6.5), dpi=150)
@@ -343,6 +362,9 @@ def escribir_png(resultado: Dict, png: Path, titulo: str = "Zonas de emergencia 
                             label="%s: %s%.0f m (%.0f mSv, %s)" % (
                                 z["clave"], "≤ " if z["estado"] == "menor_que_minimo" else "",
                                 z["radio_m"], z["limite_msv"], z["periodo"])))
+    terrestre = tipo_instalacion(resultado) == "terrestre"
+    if terrestre:
+        R = max([z["radio_m"] for z in zonas] + [50.0]) * 1.1
     a = math.radians(resultado.get("rumbo", 0.0))
     eslora = resultado.get("eslora_m", SHIP_LENGTH_M)
     manga = resultado.get("manga_m", SHIP_BEAM_M)
@@ -350,10 +372,12 @@ def escribir_png(resultado: Dict, png: Path, titulo: str = "Zonas de emergencia 
     # Origin at the reactor: hull points relative to it, rotated to east/north
     pts = [(x * math.cos(a) + (y - yr) * math.sin(a), -x * math.sin(a) + (y - yr) * math.cos(a))
            for x, y in casco(eslora, manga)]
-    ax.add_patch(Polygon(pts, closed=True, facecolor="#1f4e79", edgecolor="white", lw=0.8, alpha=0.85, zorder=1,
-                         label="Buque a escala (%.1f × %.1f m)" % (eslora, manga)))
+    if not terrestre:
+        ax.add_patch(Polygon(pts, closed=True, facecolor="#1f4e79", edgecolor="white", lw=0.8, alpha=0.85, zorder=1,
+                             label="Buque a escala (%.1f × %.1f m)" % (eslora, manga)))
     ax.plot([0], [0], marker="o", ms=6, mfc="#f1c40f", mec="black", zorder=6, ls="none",
-            label="Reactor (%.0f m de la popa): centro de las zonas" % resultado.get("reactor_desde_popa_m", REACTOR_FROM_STERN_M))
+            label="Reactor (planta terrestre): centro de las zonas" if terrestre else
+            "Reactor (%.0f m de la popa): centro de las zonas" % resultado.get("reactor_desde_popa_m", REACTOR_FROM_STERN_M))
     ax.annotate("N", xy=(0.93, 0.95), xytext=(0.93, 0.85), xycoords="axes fraction",
                 ha="center", arrowprops=dict(arrowstyle="-|>", color="#333"))
     ax.set_xlim(-R, R)
@@ -372,20 +396,30 @@ def escribir_png(resultado: Dict, png: Path, titulo: str = "Zonas de emergencia 
 
 
 def generar(postprocess: Path, lat: float = DEFAULT_LAT, lon: float = DEFAULT_LON,
-            rumbo: float = DEFAULT_HEADING, e2: Optional[Path] = None) -> Dict:
-    """Compute the zones and write zonas_emergencia.json and mapa_zonas.html (in the E1 folder)."""
+            rumbo: float = DEFAULT_HEADING, e2: Optional[Path] = None, instalacion: str = "buque") -> Dict:
+    """Compute the zones and write zonas_emergencia.json and mapa_zonas.html (in the E1 folder).
+    instalacion = "buque": lat/lon is the centre of the ship and the zones are centred on the reactor, aft;
+    "terrestre": lat/lon is the reactor of a land plant (no hull, heading or berth)."""
     res = calcular_zonas(postprocess, e2)
-    rlat, rlon = posicion_reactor(lat, lon, rumbo)
-    res.update(lat=lat, lon=lon, rumbo=rumbo, eslora_m=SHIP_LENGTH_M, manga_m=SHIP_BEAM_M, buque=SHIP_NAME,
-               reactor_desde_popa_m=REACTOR_FROM_STERN_M, reactor_lat=rlat, reactor_lon=rlon,
-               atraque=DEFAULT_BERTH if (lat, lon) == (DEFAULT_LAT, DEFAULT_LON) else "Posición personalizada")
+    instalacion = tipo_instalacion(instalacion)
+    if instalacion == "terrestre":
+        res.update(instalacion="terrestre", lat=lat, lon=lon, rumbo=0.0, eslora_m=0.0, manga_m=0.0,
+                   buque=INSTALACIONES["terrestre"]["nombre"], reactor_desde_popa_m=0.0,
+                   reactor_lat=lat, reactor_lon=lon, atraque="Emplazamiento terrestre",
+                   _visibles=INSTALACIONES["terrestre"]["visibles"])
+    else:
+        rlat, rlon = posicion_reactor(lat, lon, rumbo)
+        res.update(instalacion="buque", lat=lat, lon=lon, rumbo=rumbo, eslora_m=SHIP_LENGTH_M, manga_m=SHIP_BEAM_M,
+                   buque=SHIP_NAME, reactor_desde_popa_m=REACTOR_FROM_STERN_M, reactor_lat=rlat, reactor_lon=rlon,
+                   atraque=DEFAULT_BERTH if (lat, lon) == (DEFAULT_LAT, DEFAULT_LON) else "Posición personalizada")
     (postprocess / "zonas_emergencia.json").write_text(
         json.dumps(res, indent=2, ensure_ascii=False), encoding="utf-8")
     try:
         escribir_mapa(res, postprocess / "mapa_zonas.html", str(postprocess))
     except OSError as e:
         logging.error("mapa_zonas.html not written (%s): keep visor_zonas.html next to this script", e)
-    escribir_png(res, postprocess / "mapa_zonas.png")
+    vis = res.get("_visibles") or INSTALACIONES[instalacion]["visibles"]      # the screening indicators are left out
+    escribir_png({**res, "zonas": [z for z in res["zonas"] if z["clave"] in vis]}, postprocess / "mapa_zonas.png")
     for z in res["zonas"]:
         if z["radio_m"] is None:
             logging.warning("%s: criterion exceeded at the largest distance (%s m) — extend the range",
@@ -407,10 +441,12 @@ def main():
     ap.add_argument("--rumbo", type=float, default=DEFAULT_HEADING, help="ship heading [deg]")
     ap.add_argument("--e2", type=Path, default=None,
                     help="postprocess folder of scenario E2 (default: <postprocess>/../E2/postprocess if it exists)")
+    ap.add_argument("--instalacion", choices=sorted(INSTALACIONES), default="buque",
+                    help="buque: reactor on board (default); terrestre: land plant centred on lat/lon")
     a = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(levelname)-8s %(message)s")
     e2 = a.e2 or (a.postprocess.parent / "E2" / "postprocess")
-    generar(a.postprocess, a.lat, a.lon, a.rumbo, e2 if e2.exists() else None)
+    generar(a.postprocess, a.lat, a.lon, a.rumbo, e2 if e2.exists() else None, a.instalacion)
 
 
 if __name__ == "__main__":

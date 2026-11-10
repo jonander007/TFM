@@ -238,6 +238,19 @@ Tres modos de entrada:
 - Opción para borrar los directorios de ejecución de ARCON96 al finalizar.
 - Opción para conservar la carpeta WORK completa.
 
+### Tipo de instalación
+
+Arriba del todo se elige entre **Embarcación (reactor a bordo)** y **Planta terrestre**:
+
+- *Embarcación*: latitud y longitud del centro del buque y rumbo de la proa. Las zonas se centran en el
+  reactor, a popa, y el casco se dibuja a escala. Barrido propuesto: 10–400 m, paso 10 m.
+- *Planta terrestre*: latitud y longitud del reactor. Sin casco ni rumbo. Barrido propuesto: 50–1.200 m,
+  paso 50 m. El mapa muestra por defecto EAB, LPZ y zona de planificación.
+- *Potencia (MWt)*: se escribe en todos los `.psf` (el inventario `.nif` va en Ci/MWt).
+
+El transporte en RADTRAD y los criterios de dosis son los mismos en los dos casos; cambian la geometría,
+el barrido de distancias propuesto y lo que se dibuja en el mapa.
+
 ### Sección RADTRAD — Cálculo de consecuencias
 
 Activa o desactiva con el toggle ON/OFF. Cuando está activa:
@@ -245,7 +258,11 @@ Activa o desactiva con el toggle ON/OFF. Cuando está activa:
 **Generación de PSF**  
 Dos modos:
 - *Usar plantilla existente* — selecciona un `.psf` ya preparado.
-- *Generar desde cero* — abre el Generador PSF integrado (pestaña 2).
+- *Generar desde cero* — usa el `.psf` del Generador PSF (pestaña 2, botón «Usar en el cálculo»).
+
+En los dos modos la cadena sustituye en cada caso el inventario, los ficheros `.inp` y `.rft`, la potencia,
+las fracciones del yodo y el X/Q de las dose locations 1 y 2, que deben estar en el Environment y tener
+tabla de X/Q de usuario. Si el `.psf` no lo cumple, la ejecución se detiene y lo dice.
 
 **NIF — Archivo de inventario de nucléidos**  
 Tres modos:
@@ -277,6 +294,18 @@ La consola de log muestra la salida en tiempo real con colores por nivel (INFO, 
 ## Pestaña 2 — Generador PSF
 
 Construye un archivo `.psf` de RADTRAD 3.03 desde cero sin necesidad de plantilla.
+
+**Barra superior**
+- *Preajuste*: «Embarcación — KP-FHR a bordo» y «Planta terrestre — KP-FHR» cargan el modelo validado con
+  RADTRAD (el de `template_kpfhr.psf`: descarga directa al ambiente y sala de control); «Vacío» deja lo mínimo.
+- *Guardar config / Cargar config*: guarda y recupera todo el contenido del generador en un `.json`.
+- *Guardar PSF…*: escribe el `.psf` donde se indique.
+- *Usar en el cálculo*: lo valida, lo guarda en `INPUT/PSF/generated.psf` y lo selecciona en la pestaña 1.
+
+**Alcance.** Escribe compartimentos (con filtros de recirculación y deposición natural), caminos de tipo
+Filter, Air Leakage y Suppression Pool, y dose locations. No escribe sprays, «overlying pool» ni las tablas
+de Piping: si se activan, avisa en lugar de generar un fichero incoherente. El término fuente entra siempre
+en el compartimento 1. Volúmenes en m³ y caudales en m³/s (el fichero va en ft³ y cfm).
 
 ### Sub-pestañas
 
@@ -351,12 +380,13 @@ Al terminar una ejecución la pestaña se abre con sus resultados. El selector m
 ejecuciones (caso base y sensibilidad clase F, 1 m/s).
 
 - **Zonas:** marca las que quieras ver y cambia el límite (mSv) para recalcular el radio.
-- **Buque:** latitud, longitud y rumbo (dirección de la proa) del centro del buque, eslora, manga y
-  distancia del reactor a la popa. Las zonas se centran en el reactor.
+- **Instalación:** embarcación o planta terrestre. Embarcación: latitud, longitud y rumbo (dirección de la
+  proa) del centro del buque, eslora, manga y distancia del reactor a la popa; las zonas se centran en el
+  reactor. Planta terrestre: latitud y longitud del reactor, sin casco.
 - **Mapa:** buque, reactor y zonas a escala sobre OpenStreetMap, callejero o satélite de Esri (o sin
   mapa), con cuadrícula de latitud y longitud y las coordenadas del cursor (decimal y grados,
   minutos y segundos) y su distancia al reactor. Rueda: zoom; arrastrar: mover; clic derecho:
-  situar ahí el centro del buque; doble clic: ajustar. Las teselas se guardan en `cache_teselas/`.
+  situar ahí el centro del buque o el reactor de la planta; doble clic: ajustar. Las teselas se guardan en `cache_teselas/`.
 - **Abrir mapa en el navegador:** guarda los cambios y abre el mapa sobre OpenStreetMap o satélite.
 - **Guardar buque y criterios:** reescribe `zonas_emergencia.json`, `mapa_zonas.html` y `mapa_zonas.png`.
 
@@ -1098,6 +1128,91 @@ class ArconWidget(tk.Frame):
 
 
 # =============================================================================
+# WIDGET TIPO DE INSTALACIÓN
+# =============================================================================
+class InstalacionWidget(tk.Frame):
+    """Ship or land plant. It sets what changes between both: the position that is asked for (centre of
+    the ship and heading, or the reactor of the plant), the distance sweep proposed for ARCON96, the
+    zones shown on the map and the thermal power written in every .psf."""
+    DEFAULTS = {"buque": (10, 400, 10), "terrestre": (50, 1200, 50)}
+
+    def __init__(self, parent, on_change=None):
+        super().__init__(parent, bg=BG_CARD, highlightthickness=1, highlightbackground=BORDER)
+        self._on_change = on_change
+        try:
+            import zonas_emergencia as ZE
+            lat, lon, rumbo = ZE.DEFAULT_LAT, ZE.DEFAULT_LON, ZE.DEFAULT_HEADING
+        except Exception:
+            lat, lon, rumbo = 43.3605, -3.0820, 300.0
+        self._ship_default = (lat, lon, rumbo)
+        tk.Label(self, text="Tipo de instalación", bg=BG_CARD, fg=TEXT, font=FONT_BOLD,
+                 anchor="w").pack(fill="x", padx=12, pady=(8, 2))
+        row = tk.Frame(self, bg=BG_CARD); row.pack(fill="x", padx=12)
+        self.tipo = tk.StringVar(value="buque")
+        for val, label in (("buque", "Embarcación (reactor a bordo)"), ("terrestre", "Planta terrestre")):
+            tk.Radiobutton(row, text=label, variable=self.tipo, value=val, bg=BG_CARD, fg=TEXT, font=FONT_UI,
+                           activebackground=BG_CARD, selectcolor=BG_CARD,
+                           command=self._changed).pack(side="left", padx=(0, 16))
+        grid = tk.Frame(self, bg=BG_CARD); grid.pack(fill="x", padx=12, pady=(6, 2))
+        self.v = {"lat": tk.StringVar(value=f"{lat:.5f}"), "lon": tk.StringVar(value=f"{lon:.5f}"),
+                  "rumbo": tk.StringVar(value=f"{rumbo:g}"), "potencia": tk.StringVar(value="320")}
+        self._lbl, self._ent = {}, {}
+        for i, (k, txt) in enumerate((("lat", "Latitud"), ("lon", "Longitud"), ("rumbo", "Rumbo (°)"),
+                                      ("potencia", "Potencia (MWt)"))):
+            self._lbl[k] = tk.Label(grid, text=txt, bg=BG_CARD, fg=MUTED, font=FONT_SM, anchor="w")
+            self._lbl[k].grid(row=0, column=i, sticky="w", padx=(0, 8))
+            self._ent[k] = SE(grid, textvariable=self.v[k], width=12)
+            self._ent[k].grid(row=1, column=i, sticky="we", padx=(0, 8), ipady=4)
+            grid.columnconfigure(i, weight=1)
+        self._hint = tk.Label(self, text="", bg=BG_CARD, fg=MUTED, font=("Segoe UI", 8), wraplength=560,
+                              justify="left", anchor="w")
+        self._hint.pack(fill="x", padx=12, pady=(4, 8))
+        self._refresh()
+
+    def _refresh(self):
+        buque = self.tipo.get() == "buque"
+        self._lbl["lat"].config(text="Latitud (centro del buque)" if buque else "Latitud (reactor)")
+        self._lbl["lon"].config(text="Longitud (centro del buque)" if buque else "Longitud (reactor)")
+        self._ent["rumbo"].config(state="normal" if buque else "disabled")
+        self._hint.config(text=(
+            "Buque: las zonas se centran en el reactor, a popa, y el casco se dibuja a escala con su rumbo. "
+            "Por defecto, atraque de metaneros de BBG (Zierbena). En el mapa: EAB, LPZ, evacuación, confinamiento "
+            "y planificación." if buque else
+            "Planta terrestre: las zonas se centran en el punto indicado (el reactor), sin casco ni rumbo. No hay "
+            "emplazamiento por defecto: escribe sus coordenadas o sitúalo después en la pestaña del mapa. En el mapa: "
+            "EAB, LPZ y planificación (las demás se pueden activar). Barrido propuesto: 50–1.200 m, el intervalo "
+            "en el que se validó ARCON96."))
+
+    def _changed(self):
+        self._refresh()
+        if self._on_change:
+            self._on_change(self.tipo.get())
+
+    def get(self):
+        def num(k, d):
+            try: return float(self.v[k].get().replace(",", "."))
+            except ValueError: return d
+        lat, lon, rumbo = (num("lat", self._ship_default[0]), num("lon", self._ship_default[1]),
+                           num("rumbo", self._ship_default[2]) % 360)
+        pot = num("potencia", 320.0)
+        if pot <= 0:
+            raise ValueError("La potencia térmica debe ser mayor que 0 MWt")
+        if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+            raise ValueError("Latitud o longitud fuera de rango")
+        return {"instalacion": self.tipo.get(), "plant_power": pot,
+                "ship": [lat, lon, rumbo if self.tipo.get() == "buque" else 0.0]}
+
+    def set(self, d: dict):
+        self.tipo.set("terrestre" if str(d.get("instalacion", "buque")).startswith("terr") else "buque")
+        if d.get("ship") and len(d["ship"]) >= 3:
+            self.v["lat"].set(f"{float(d['ship'][0]):.5f}"); self.v["lon"].set(f"{float(d['ship'][1]):.5f}")
+            self.v["rumbo"].set(f"{float(d['ship'][2]):g}")
+        if d.get("plant_power"):
+            self.v["potencia"].set(f"{float(d['plant_power']):g}")
+        self._refresh()
+
+
+# =============================================================================
 # WIDGET NIF
 # =============================================================================
 
@@ -1229,7 +1344,7 @@ class PsfWidget(tk.Frame):
                                         highlightbackground="#1A7A3C")
         sc = tk.Frame(self._scratch_frame, bg=BG_OK)
         sc.pack(fill="x", padx=8, pady=8)
-        tk.Label(sc, text="El PSF se generará con el Generador PSF integrado.",
+        tk.Label(sc, text="Construye el modelo en la pestaña «Generador PSF» y pulsa «Usar en el cálculo».",
                  bg=BG_OK, fg=SUCCESS, font=("Segoe UI", 9),
                  anchor="w").pack(fill="x", pady=(0, 4))
         self._scratch_out_var = tk.StringVar(
@@ -1309,6 +1424,12 @@ class PsfWidget(tk.Frame):
                 pass
         messagebox.showinfo("Generador PSF",
                             "Cambia a la pestaña 'Generador PSF' para construir el archivo.")
+
+    def use_generated(self, path):
+        """Select «desde cero» with the .psf the generator has just written."""
+        self._scratch_out_var.set(str(path))
+        self._mode.set("scratch")
+        self._refresh_mode()
 
     def set_notebook(self, nb):
         """Llamar desde PipelineGUI para registrar el notebook principal."""
@@ -1614,6 +1735,10 @@ class PipelineGUI(tk.Frame):
         canvas.bind_all("<MouseWheel>",
                         lambda e: canvas.yview_scroll(int(-1*(e.delta/120)), "units"))
 
+        # ── Tipo de instalación (embarcación / planta terrestre) ───────────────
+        self.inst_widget = InstalacionWidget(sf, on_change=self._on_instalacion)
+        self.inst_widget.pack(fill="x", padx=8, pady=(8, 0))
+
         # ── SECCIÓN 1: Factores de dispersión X/Q ─────────────────────────────
         self.sec_xq = Section(
             sf, "  Cálculo de factores de dispersión X/Q",
@@ -1730,6 +1855,13 @@ class PipelineGUI(tk.Frame):
 
     # ── Callbacks toggle ──────────────────────────────────────────────────────
 
+    def _on_instalacion(self, tipo):
+        """Propose the distance sweep of the installation type (it can still be edited)."""
+        dmin, dmax, dd = InstalacionWidget.DEFAULTS[tipo]
+        self.arcon_widget.set_distances(dmin, dmax, dd)
+        self.log.append(f"Instalación: {'embarcación' if tipo == 'buque' else 'planta terrestre'} · "
+                        f"barrido propuesto {dmin}–{dmax} m, paso {dd} m", "MUTED")
+
     def _on_xq_toggle(self, state):
         # Si X/Q está OFF → mostrar bridge picker en PSF
         self.psf_widget.show_bridge(not state and self.sec_rad.is_active())
@@ -1757,6 +1889,7 @@ class PipelineGUI(tk.Frame):
         p.update(self.psf_widget.get())
         p.update(self.nif_widget.get())
         p.update(self.sens_widget.get())
+        p.update(self.inst_widget.get())
         nif_data = self.nif_widget.get()
         p["support_names"] = (
             Path(self.rft_picker.get()).name,
@@ -1813,7 +1946,13 @@ class PipelineGUI(tk.Frame):
             if "arcon_exe" in d: aw.arcon_exe.set(d["arcon_exe"])
             aw.delete_dirs.set(d.get("delete_arcon_dirs", False))
 
-            if "template_path" in d: self.psf_widget._psf.var.set(d["template_path"])
+            self.inst_widget.set(d)
+            aw.keep_work.set(d.get("keep_work", True)); aw.sens_met.set(d.get("sensibilidad_met", False))
+            if d.get("psf_from_scratch") and d.get("template_path"):
+                self.psf_widget.use_generated(d["template_path"])
+            elif "template_path" in d:
+                self.psf_widget._mode.set("template"); self.psf_widget._refresh_mode()
+                self.psf_widget._psf.var.set(d["template_path"])
             if "bridge_excel"  in d: self.psf_widget.bridge_var.set(d["bridge_excel"])
             if "radtrad_exe"   in d: self.radtrad_exe.set(d["radtrad_exe"])
             self.delete_radtrad.set(d.get("delete_radtrad", False))
@@ -1876,6 +2015,15 @@ class PipelineGUI(tk.Frame):
                 errors.append("Indica al menos 1 archivo MET")
             if params["met_mode"] == "excel" and not params["excel_path"]:
                 errors.append("Selecciona el archivo Excel MET*.xlsx")
+
+        if run_rad and not Path(params.get("template_path") or "").is_file():
+            errors.append("No existe el PSF: " + str(params.get("template_path") or "(sin indicar)")
+                          + ("\nGenéralo en la pestaña «Generador PSF» con «Usar en el cálculo»."
+                             if params.get("psf_from_scratch") else ""))
+        if run_xq and params["dist_max"] > 1200:
+            if not messagebox.askyesno("Distancia máxima", "ARCON96 se validó hasta unos 1.200 m; por encima, el "
+                                       "X/Q es una extrapolación.\n\n¿Continuar?"):
+                return
 
         if run_rad and not run_xq:
             bridge = params.get("bridge_excel", "").strip()
@@ -2183,6 +2331,8 @@ class TimeTable(tk.Frame):
 
         for _ in range(default_rows):
             self._add_row()
+        if default_rows == 2:                    # 0 h and 720 h: RADTRAD needs increasing times
+            self._rows[1][0].set("720.0")
 
     def _add_row(self):
         if len(self._rows) >= self.MAX_ROWS:
@@ -2304,7 +2454,7 @@ class CompPanel(tk.Frame):
             col.pack(side="left", padx=(0, 16))
             tk.Label(col, text=label, bg=CARD, fg=MUTED,
                      font=FONT_SM).pack(anchor="w")
-            t = ToggleSwitch(col, initial=(key == "decay"),
+            t = ToggleSwitch(col, initial=False,
                              bg=CARD, callback=lambda v, k=key: self._on_flag(k, v))
             t.pack(anchor="w", pady=2)
             self._flags[key] = t
@@ -2448,6 +2598,26 @@ class CompPanel(tk.Frame):
             "deposit_elemental":       self.dep_elem_table.get_data(),
         }
 
+    def set_data(self, d: dict):
+        self.name_var.set(d.get("name", self.name_var.get()))
+        self.type_combo.current(int(d.get("comp_type", 3)) - 1)
+        self.vol_var.set(str(d.get("volume_m3", 0.0)))
+        for key, k in (("sprays", "has_sprays"), ("filters", "has_filters"), ("deposition", "has_deposition"),
+                       ("opool", "has_opool"), ("detail", "detail_output"), ("decay", "decay")):
+            self._flags[key].set(bool(d.get(k, False)))
+        self.filter_flow_var.set(str(d.get("filter_flow_rate", 0.0)))
+        for tbl, k in ((self.filter_table, "filter_eff_table"), (self.dep_user_table, "deposit_aerosol_user"),
+                       (self.dep_henry_table, "deposit_henry"), (self.dep_elem_table, "deposit_elemental")):
+            if d.get(k): tbl.set_data(d[k])
+        self.dep_aer_combo.current(int(d.get("deposit_aerosol_model", 0)))
+        self.dep_powers_reactor.current(int(d.get("deposit_powers_reactor", 1)) - 1)
+        pct = str(float(d.get("deposit_powers_pctile", 50.0)))
+        if pct in self.dep_powers_pctile["values"]: self.dep_powers_pctile.set(pct)
+        self.dep_elem_combo.current(int(d.get("deposit_elemental_model", 0)))
+        self._show_frame(self._filter_sec, self._flags["filters"].get())
+        self._show_frame(self._dep_sec, self._flags["deposition"].get())
+        self._refresh_dep(); self._refresh_dep_elem()
+
 
 # =============================================================================
 # PANEL DE PATHWAY
@@ -2581,6 +2751,18 @@ class PathPanel(tk.Frame):
             "sp_org":       self.sp_org_table.get_data(),
         }
 
+    def set_data(self, d: dict):
+        self.name_var.set(d.get("name", self.name_var.get()))
+        n = len(self.from_combo["values"])
+        self.from_combo.current(min(max(int(d.get("from_comp", 1)) - 1, 0), n - 1))
+        self.to_combo.current(min(max(int(d.get("to_comp", 2)) - 1, 0), n - 1))
+        self.type_combo.current(int(d.get("path_type", 4)) - 1)
+        self.sp_vol_var.set(str(d.get("sp_vol", 0.0)))
+        for tbl, k in ((self.conv_table, "conv_table"), (self.filter_table, "filter_table"),
+                       (self.sp_aer_table, "sp_aer"), (self.sp_elem_table, "sp_elem"), (self.sp_org_table, "sp_org")):
+            if d.get(k): tbl.set_data(d[k])
+        self._refresh_type()
+
 
 # =============================================================================
 # PANEL DE DOSE LOCATION
@@ -2698,10 +2880,101 @@ class DosePanel(tk.Frame):
             "occ_table":      self.occ_table.get_data(),
         }
 
+    def set_data(self, d: dict):
+        self.name_var.set(d.get("name", self.name_var.get()))
+        n = len(self.comp_combo["values"])
+        self.comp_combo.current(min(max(int(d.get("comp_number", 1)) - 1, 0), n - 1))
+        self.xq_combo.current(int(d.get("xq_model", 0)))
+        self.br_toggle.set(bool(d.get("has_br", True)))
+        self.occ_toggle.set(bool(d.get("has_occupancy", False)))
+        for tbl, k in ((self.xq_table, "xq_table"), (self.br_table, "br_table"), (self.occ_table, "occ_table")):
+            if d.get(k): tbl.set_data(d[k])
+        self._refresh()
+
 
 # =============================================================================
 # PESTAÑA GLOBAL
 # =============================================================================
+
+# =============================================================================
+# PREAJUSTES DEL GENERADOR PSF
+# =============================================================================
+# Both presets are the RADTRAD model validated with the real code (template_kpfhr.psf): the attenuated
+# source term goes to a holdup volume and from there straight to the environment (KP-TR-012 takes no
+# credit for the building in the transport); dose locations 1 and 2 are the outdoor receptors whose X/Q
+# the chain overwrites, and 3 is the control room. Ship and land plant share the transport model: they
+# differ in the names and in what the chain does around it (distances, map, zones shown).
+PSF_PRESET_KEYS = {
+    "Embarcación — KP-FHR a bordo (320 MWt)": "buque",
+    "Planta terrestre — KP-FHR (320 MWt por unidad)": "terrestre",
+    "Vacío (3 compartimentos)": "vacio",
+}
+_FT3, _CFM = 35.314667, 2118.88            # as RADTRAD_ENGINE (m³ → ft³, m³/s → cfm)
+
+
+def psf_preset(kind: str) -> dict:
+    def tt(times, **cols):
+        return dict({"tiempo": list(times)}, **{k: list(v) for k, v in cols.items()})
+
+    def filt(cfm, aer, elem):
+        q = cfm / _CFM
+        return tt([0.0, 720.0], **{"Flow (m³/s)": [q, q], "Aerosol %": [aer, aer], "Elemental %": [elem, elem],
+                                   "Orgánico %": [0.0, 0.0]})
+
+    if kind == "vacio":
+        return {"global": {"plant_model_name": "Plant Model", "ev_active": False},
+                "compartments": [{"name": "Source", "comp_type": 3, "volume_m3": 1000.0},
+                                 {"name": "Environment", "comp_type": 2, "volume_m3": 0.0},
+                                 {"name": "Control Room", "comp_type": 1, "volume_m3": 1000.0}],
+                "pathways": [{"name": "Release to Environment", "from_comp": 1, "to_comp": 2, "path_type": 2,
+                              "filter_table": filt(1.0e6, 0.0, 0.0)}],
+                "dose_locations": [
+                    {"name": "Exclusion Area Boundary", "comp_number": 2, "xq_model": 1,
+                     "xq_table": tt([0.0, 720.0], **{"X/Q (s/m³)": [1.0e-3, 1.0e-3]})},
+                    {"name": "Low Population Zone", "comp_number": 2, "xq_model": 1,
+                     "xq_table": tt([0.0, 720.0], **{"X/Q (s/m³)": [1.0e-3, 1.0e-3]})}]}
+    tierra = kind == "terrestre"
+    xq = tt([0, 2, 4, 8, 12, 24, 96, 168, 360, 720], **{"X/Q (s/m³)": [1.0e-3] * 10})
+    br = tt([0, 8, 24], **{"BR (m³/s)": [3.47e-4, 1.75e-4, 2.32e-4]})
+    return {
+        "global": {
+            "plant_model_name": ("KP-FHR land plant - attenuated source term released directly to the environment"
+                                 if tierra else
+                                 "KP-FHR - attenuated source term released directly to the environment"),
+            "scenario_name": "", "nif_file": "defaults\\kpfhr_terminofuente.nif",
+            "inp_file": "defaults\\fgr11&12.inp", "rft_file": "defaults\\kpfhr_directo.rft",
+            "plant_power_mwt": "320", "output_filename": "Test16.o0",
+            "frac_aerosol": "0.95", "frac_elemental": "0.0485", "frac_organic": "0.0015",
+            "calculate_daughters": False, "show_plant": True, "show_scenario": True, "show_event": True,
+            "show_step": False, "show_model": False, "ev_active": True,
+            "ev_table": tt([0, 8, 24, 96], **{"X/Q (-)": [3.32e-4, 1.96e-4, 7.64e-5, 2.19e-5]})},
+        "compartments": [
+            {"name": "Release Holdup", "comp_type": 3, "volume_m3": 3.892e5 / _FT3},
+            {"name": "Environment", "comp_type": 2, "volume_m3": 0.0},
+            {"name": "Reactor Building" if tierra else "Auxiliary Building", "comp_type": 3,
+             "volume_m3": 1.0e6 / _FT3},
+            {"name": "Control Room", "comp_type": 1, "volume_m3": 1.1e5 / _FT3, "detail_output": True}],
+        "pathways": [
+            {"name": "Unused (zero flow)", "from_comp": 1, "to_comp": 3, "path_type": 4,
+             "conv_table": tt([0.0, 720.0], **{"Flow (/s)": [0.0, 0.0]})},
+            {"name": "Direct Release to Environment", "from_comp": 1, "to_comp": 2, "path_type": 2,
+             "filter_table": filt(1.0e6, 0.0, 0.0)},
+            {"name": "Filter 2  Environment to CR", "from_comp": 2, "to_comp": 4, "path_type": 2,
+             "filter_table": filt(5800.0, 99.0, 99.0)},
+            {"name": "Unfiltered  Environment to CR", "from_comp": 2, "to_comp": 4, "path_type": 2,
+             "filter_table": filt(10.0, 0.0, 0.0)},
+            {"name": "Control Room Exhaust", "from_comp": 4, "to_comp": 2, "path_type": 2,
+             "filter_table": filt(5810.0, 0.0, 0.0)}],
+        "dose_locations": [
+            {"name": "Exclusion Area Boundary", "comp_number": 2, "xq_model": 1, "xq_table": xq,
+             "has_br": True, "br_table": br},
+            {"name": "Low Population Zone", "comp_number": 2, "xq_model": 1, "xq_table": xq,
+             "has_br": True, "br_table": br},
+            {"name": "Control Room", "comp_number": 4, "xq_model": 0, "has_br": True,
+             "br_table": tt([0.0, 720.0], **{"BR (m³/s)": [3.47e-4, 0.0]}), "has_occupancy": True,
+             "occ_table": tt([0, 24, 96, 720], **{"Factor (-)": [1.0, 0.6, 0.4, 0.0]})}],
+    }
+
 
 class GlobalTab(tk.Frame):
     def __init__(self, parent, **kw):
@@ -2714,14 +2987,13 @@ class GlobalTab(tk.Frame):
 
         self._fields = {}
         defs = [
-            ("title",            "Título del caso:",          "RADTRAD Case",          ""),
-            ("plant_model_name", "Nombre modelo planta:",     "Plant Model",            ""),
-            ("scenario_name",    "Nombre escenario:",         "Scenario",               ""),
-            ("nif_file",         "Archivo NIF:",              "defaults\\i_SMR.NIF",    ""),
+            ("plant_model_name", "Título del modelo:",        "KP-FHR - direct release to the environment", ""),
+            ("scenario_name",    "Nombre escenario:",         "",                       ""),
+            ("nif_file",         "Archivo NIF:",              "defaults\\kpfhr_terminofuente.nif", ""),
             ("inp_file",         "Archivo INP (DCF):",        "defaults\\fgr11&12.inp", ""),
-            ("rft_file",         "Archivo RFT:",              "defaults\\bwr_dba.rft",  ""),
-            ("plant_power_mwt",  "Potencia de planta:",       "530.4",                  "MWt"),
-            ("output_filename",  "Archivo de salida:",        "output.o0",              ""),
+            ("rft_file",         "Archivo RFT:",              "defaults\\kpfhr_directo.rft",  ""),
+            ("plant_power_mwt",  "Potencia de planta:",       "320",                    "MWt"),
+            ("output_filename",  "Archivo de salida:",        "Test16.o0",              ""),
         ]
         for key, label, default, unit in defs:
             row = tk.Frame(b, bg=CARD); row.pack(fill="x", pady=3)
@@ -2737,7 +3009,7 @@ class GlobalTab(tk.Frame):
                           ).pack(side="left")
             else:
                 var = tk.StringVar(value=default)
-                SE(row, textvariable=var, width=20).pack(side="left", ipady=4)
+                SE(row, textvariable=var, width=60 if key == "plant_model_name" else 20).pack(side="left", ipady=4)
                 if unit:
                     tk.Label(row, text=unit, bg=CARD, fg=MUTED,
                              font=FONT_SM).pack(side="left", padx=(4,0))
@@ -2777,7 +3049,7 @@ class GlobalTab(tk.Frame):
         opts_row = tk.Frame(b3, bg=CARD); opts_row.pack(fill="x")
         self._opts = {}
         for key, label, init in [
-            ("calculate_daughters", "Decay / daughters", True),
+            ("calculate_daughters", "Decay / daughters", False),
             ("show_plant",          "Show plant",        True),
             ("show_scenario",       "Show scenario",     True),
             ("show_event",          "Show events",       True),
@@ -2845,6 +3117,17 @@ class GlobalTab(tk.Frame):
         d["ev_table"]  = self.ev_table.get_data()
         return d
 
+    def set_data(self, d: dict):
+        for k, v in self._fields.items():
+            if k in d: v.set(str(d[k]))
+        for k, v in self._iodo.items():
+            if k in d: v.set(str(d[k]))
+        for k, t in self._opts.items():
+            if k in d: t.set(bool(d[k]))
+        self.ev_toggle.set(bool(d.get("ev_active", False)))
+        if d.get("ev_table"): self.ev_table.set_data(d["ev_table"])
+        self._refresh_ev()
+
 
 # =============================================================================
 # VENTANA PRINCIPAL
@@ -2901,6 +3184,26 @@ class PSFApp(tk.Frame):
         style.map("TNotebook.Tab",
                   background=[("selected", CARD)],
                   foreground=[("selected", TEXT)])
+
+        # ── Barra: preajustes, configuración y enlace con la pestaña de cálculo ──
+        bar = tk.Frame(self, bg=CARD, highlightthickness=1, highlightbackground=BORDER)
+        bar.pack(fill="x", padx=8, pady=(8, 4))
+        tk.Label(bar, text="Preajuste:", bg=CARD, fg=MUTED, font=FONT_SM).pack(side="left", padx=(10, 4), pady=8)
+        self._preset_var = tk.StringVar(value=list(PSF_PRESET_KEYS)[0])
+        SCombo(bar, list(PSF_PRESET_KEYS), width=34, textvariable=self._preset_var).pack(side="left")
+        def _b(text, cmd, color=INPUT, fg=TEXT):
+            return tk.Button(bar, text=text, bg=color, fg=fg, relief="flat", font=FONT_SM, bd=0, padx=10, pady=5,
+                             cursor="hand2", activebackground=BLUE, activeforeground=WHITE, command=cmd)
+        _b("Cargar preajuste", self._load_preset).pack(side="left", padx=(6, 0))
+        _b("Usar en el cálculo  →", self._use_in_pipeline, GREEN, WHITE).pack(side="right", padx=(4, 10))
+        _b("Guardar PSF…", self._save_psf_from_preview, BLUE, WHITE).pack(side="right", padx=4)
+        _b("Cargar config", self._load_config).pack(side="right", padx=4)
+        _b("Guardar config", self._save_config).pack(side="right", padx=4)
+        tk.Label(self, text="Alcance: compartimentos (filtros de recirculación y deposición natural), caminos de tipo "
+                            "Filter, Air Leakage y Suppression Pool, y dose locations. No escribe sprays, «overlying "
+                            "pool» ni las tablas de Piping. Volúmenes en m³ y caudales en m³/s (el fichero va en "
+                            "ft³ y cfm).", bg=BG, fg=MUTED, font=FONT_SM, anchor="w", justify="left",
+                 wraplength=1050).pack(fill="x", padx=12, pady=(0, 4))
 
         nb = ttk.Notebook(self)
         nb.pack(fill="both", expand=True, padx=0, pady=0)
@@ -2967,12 +3270,11 @@ class PSFApp(tk.Frame):
             relief="flat", bd=0, wrap="none")
         self._preview_text.pack(fill="both", expand=True)
 
-        # Añadir compartimentos y pathways por defecto
-        self._add_comp()
-        self._add_comp()
-        self._add_comp()
-        self._add_path()
-        self._add_dose()
+        # Contenido inicial: el modelo KP-FHR validado (el mismo que template_kpfhr.psf)
+        try:
+            self._apply_config(psf_preset("buque"))
+        except Exception:
+            self._add_comp(); self._add_comp(); self._add_comp(); self._add_path(); self._add_dose()
 
     def _make_list_tab(self, nb, tab_name, color, item_name, add_cmd):
         outer = tk.Frame(nb, bg=BG)
@@ -3011,54 +3313,73 @@ class PSFApp(tk.Frame):
 
     def _add_comp(self):
         idx = len(self._comp_panels) + 1
-        p = CompPanel(self._comp_tab_frame, idx,
-                      on_delete=lambda p=None, i=idx: self._del_comp(i - 1))
+        holder = []
+        p = CompPanel(self._comp_tab_frame, idx, on_delete=lambda: self._del_comp(holder[0]))
+        holder.append(p)
         p.pack(fill="x", padx=8, pady=6)
         self._comp_panels.append(p)
+        # the pathway and dose location lists show the compartment names: keep them in step
+        p.name_var.trace_add("write", lambda *_: (self._update_path_comp_names(),
+                                                   self._update_dose_comp_names()))
         self._update_path_comp_names()
         self._update_dose_comp_names()
+        return p
 
-    def _del_comp(self, idx):
+    def _del_comp(self, panel):
+        # the panel itself is passed: an index fixed when it was created went stale after a deletion
         if len(self._comp_panels) <= 1:
             messagebox.showwarning("Mínimo", "Debe haber al menos 1 compartimento.")
             return
-        panel = self._comp_panels.pop(idx)
+        n = self._comp_panels.index(panel) + 1
+        usados = [f"pathway {i}" for i, q in enumerate(self._path_panels, 1)
+                  if n in (q.from_combo.current() + 1, q.to_combo.current() + 1)]
+        usados += [f"dose location {i}" for i, q in enumerate(self._dose_panels, 1)
+                   if q.comp_combo.current() + 1 == n]
+        if usados and not messagebox.askyesno(
+                "Compartimento en uso", f"El compartimento {n} se usa en: {', '.join(usados)}.\n"
+                "Si lo eliminas, esos elementos apuntarán a otro compartimento y habrá que revisarlos.\n\n"
+                "¿Eliminarlo?"):
+            return
+        self._comp_panels.remove(panel)
         panel.destroy()
         for i, p in enumerate(self._comp_panels, 1):
             p.set_index(i)
-            p.config(command=lambda p=p, i=i: self._del_comp(i - 1))
         self._update_path_comp_names()
         self._update_dose_comp_names()
 
     def _add_path(self):
         idx    = len(self._path_panels) + 1
         names  = self._comp_names()
-        p = PathPanel(self._path_tab_frame, idx, names,
-                      on_delete=lambda: self._del_path(idx - 1))
+        holder = []
+        p = PathPanel(self._path_tab_frame, idx, names, on_delete=lambda: self._del_path(holder[0]))
+        holder.append(p)
         p.pack(fill="x", padx=8, pady=6)
         self._path_panels.append(p)
+        return p
 
-    def _del_path(self, idx):
+    def _del_path(self, panel):
         if len(self._path_panels) <= 1:
             messagebox.showwarning("Mínimo", "Debe haber al menos 1 pathway.")
             return
-        self._path_panels.pop(idx).destroy()
+        self._path_panels.remove(panel); panel.destroy()
         for i, p in enumerate(self._path_panels, 1):
             p.set_index(i)
 
     def _add_dose(self):
         idx   = len(self._dose_panels) + 1
         names = self._comp_names()
-        p = DosePanel(self._dose_tab_frame, idx, names,
-                      on_delete=lambda: self._del_dose(idx - 1))
+        holder = []
+        p = DosePanel(self._dose_tab_frame, idx, names, on_delete=lambda: self._del_dose(holder[0]))
+        holder.append(p)
         p.pack(fill="x", padx=8, pady=6)
         self._dose_panels.append(p)
+        return p
 
-    def _del_dose(self, idx):
+    def _del_dose(self, panel):
         if len(self._dose_panels) <= 1:
             messagebox.showwarning("Mínimo", "Debe haber al menos 1 dose location.")
             return
-        self._dose_panels.pop(idx).destroy()
+        self._dose_panels.remove(panel); panel.destroy()
         for i, p in enumerate(self._dose_panels, 1):
             p.set_index(i)
 
@@ -3088,7 +3409,7 @@ class PSFApp(tk.Frame):
         gd = self.global_tab.get_data()
 
         model = PSFModel(
-            title            = gd["title"],
+            title            = gd.get("title", ""),
             plant_model_name = gd["plant_model_name"],
             scenario_name    = gd["scenario_name"],
             nif_file         = gd["nif_file"],
@@ -3566,10 +3887,65 @@ class PSFApp(tk.Frame):
         if not path:
             return
         try:
-            data = json.loads(Path(path).read_text(encoding="utf-8"))
-            messagebox.showinfo("Carga", "Carga de configuración guardada — próximamente.")
+            self._apply_config(json.loads(Path(path).read_text(encoding="utf-8")))
         except Exception as e:
-            messagebox.showerror("Error al cargar", str(e))
+            messagebox.showerror("Error al cargar", f"{path}\n{e}")
+
+    def _apply_config(self, data: dict):
+        """Fill every tab from a configuration (the dict written by «Guardar config» or a preset)."""
+        for lst in (self._dose_panels, self._path_panels, self._comp_panels):
+            for p in lst: p.destroy()
+            lst.clear()
+        self.global_tab.set_data(data.get("global", {}))
+        for cd in data.get("compartments", []) or [{}]:
+            self._add_comp().set_data(cd)
+        self._update_path_comp_names(); self._update_dose_comp_names()
+        for pd_ in data.get("pathways", []) or [{}]:
+            self._add_path().set_data(pd_)
+        for dd in data.get("dose_locations", []) or [{}]:
+            self._add_dose().set_data(dd)
+        self._refresh_preview()
+
+    def _load_preset(self):
+        key = PSF_PRESET_KEYS.get(self._preset_var.get())
+        if key is None:
+            return
+        if not messagebox.askyesno("Preajuste", "Se sustituirá todo el contenido del generador por el preajuste "
+                                               f"«{self._preset_var.get()}».\n\n¿Continuar?"):
+            return
+        self._apply_config(psf_preset(key))
+
+    def _check_for_pipeline(self, model):
+        """Problems that would stop the chain from using this .psf as its template (PIPELINE.check_template)."""
+        try:
+            import PIPELINE as _P
+        except Exception:
+            return []           # numpy / pandas not installed: the chain checks it again when it runs
+        return _P.check_template(model.to_string().encode("cp1252", "replace").splitlines(keepends=True))
+
+    def _use_in_pipeline(self):
+        """Write the .psf to INPUT/PSF/generated.psf and select it as the template of the calculation tab."""
+        if not GENERATOR_OK:
+            messagebox.showerror("Error", "RADTRAD_ENGINE no disponible."); return
+        try:
+            model = self._build_model()
+            errors = model.validate()
+        except Exception as e:
+            messagebox.showerror("Error al construir modelo", str(e)); return
+        errors += self._check_for_pipeline(model) if not errors else []
+        if errors:
+            messagebox.showerror("El PSF no se puede usar en el cálculo", "\n".join(f"• {e}" for e in errors))
+            return
+        path = DIR_PSF / "generated.psf"
+        try:
+            model.write(path)
+        except Exception as e:
+            messagebox.showerror("Error al guardar PSF", str(e)); return
+        if callable(getattr(self, "on_use", None)):
+            self.on_use(path)
+        messagebox.showinfo("PSF listo", f"Guardado en:\n{path}\n\nLa pestaña de cálculo lo usará como plantilla. "
+                            "La cadena sustituye en cada caso el inventario, los ficheros .inp y .rft, la potencia, "
+                            "las fracciones del yodo y el X/Q de las dose locations 1 y 2.")
 
 
 
@@ -3657,7 +4033,10 @@ class RADTRADApp(tk.Tk):
 
         tab2 = tk.Frame(nb, bg=BG_APP)
         nb.add(tab2, text="  Generador PSF  ")
-        PSFContent(tab2).pack(fill="both", expand=True)
+        self._psf_content = PSFContent(tab2)
+        self._psf_content.pack(fill="both", expand=True)
+        self._psf_content.on_use = lambda path: (self._pipeline_content.psf_widget.use_generated(path),
+                                                 nb.select(tab1))
 
         # Emergency zone map: native view to scale + full map in the browser (mapa_tab.py)
         tab3 = tk.Frame(nb, bg=BG_APP)
@@ -3666,6 +4045,7 @@ class RADTRADApp(tk.Tk):
             from mapa_tab import MapaZonasTab
             self.mapa_tab = MapaZonasTab(tab3, SCRIPT_DIR)
             self.mapa_tab.pack(fill="both", expand=True)
+            self.mapa_tab.instalacion_por_defecto = lambda: self._pipeline_content.inst_widget.get()
             self._pipeline_content.on_run_finished = (
                 lambda ok: (self.mapa_tab.refrescar(seleccionar_ultimo=True), ok and nb.select(tab3)))
         except Exception as e:

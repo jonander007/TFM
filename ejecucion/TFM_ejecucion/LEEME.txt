@@ -40,7 +40,7 @@ CÓMO EJECUTAR CON LA INTERFAZ GRÁFICA (recomendado)
   5. Al terminar se abre la pestaña «Mapa de zonas» con los resultados: radios, criterios
      editables y el mapa de Bilbao (OpenStreetMap, callejero o satélite) con el buque, el reactor
      y las zonas a escala, la cuadrícula de coordenadas y la latitud y longitud del cursor.
-     Clic derecho sobre el mapa sitúa el buque; «Guardar buque y criterios» lo graba. Necesita
+     Clic derecho sobre el mapa sitúa el buque; «Guardar posición y criterios» lo graba. Necesita
      internet para descargar el mapa (se guarda en cache_teselas\); sin conexión dibuja las
      zonas sin fondo. El botón «Abrir mapa en el navegador» abre además el visor web. El selector permite pasar al caso de sensibilidad y a ejecuciones anteriores.
      VER_MAPA.bat sigue abriendo el mapa más reciente sin la interfaz.
@@ -121,3 +121,21 @@ meteorología constante, clase F y 1 m/s todas las horas (accidente de referenci
   Resultados en RUN_N\OUTPUT\SENS_F1 (E1) y RUN_N\OUTPUT\SENS_F1\E2.
 - Por consola: python sensibilidad_met.py  (mismas preguntas que PIPELINE.py; resultados en
   psf_batch_F1\postprocess y ARCON96 en ARCON_F1).
+
+Embarcación o planta terrestre
+  Arriba de la pestaña de cálculo se elige el tipo de instalación:
+    - Embarcación (por defecto): latitud y longitud del centro del buque y rumbo de la proa. Las zonas
+      se centran en el reactor, a popa. Barrido propuesto: 10-400 m, paso 10 m.
+    - Planta terrestre: latitud y longitud del reactor, sin casco ni rumbo. Barrido propuesto:
+      50-1200 m, paso 50 m. El mapa muestra por defecto EAB, LPZ y zona de planificación.
+  La potencia (MWt) de esa tarjeta se escribe en todos los .psf. El modelo de RADTRAD y los criterios
+  de dosis son los mismos en los dos casos. El tipo se puede cambiar después en la pestaña del mapa y
+  en el visor web. Por consola: python zonas_emergencia.py <postprocess> --instalacion terrestre
+
+Generador PSF (pestaña 2)
+  - Preajustes «Embarcación» y «Planta terrestre»: el modelo KP-FHR validado (template_kpfhr.psf).
+  - «Guardar config» / «Cargar config»: todo el contenido del generador en un .json.
+  - «Usar en el cálculo»: valida el .psf, lo guarda en INPUT\PSF\generated.psf y lo selecciona en la
+    pestaña 1. Las dose locations 1 y 2 deben estar en el Environment con tabla de X/Q de usuario,
+    porque la cadena escribe en ellas el X/Q de ARCON96; si no, la ejecución se detiene y lo dice.
+  - No escribe sprays, «overlying pool» ni las tablas de Piping: avisa si se activan.

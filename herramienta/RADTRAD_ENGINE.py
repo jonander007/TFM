@@ -245,7 +245,7 @@ class Compartment:
 
     # Escenario
     detail_output: bool = False
-    decay:         bool = True
+    decay:         bool = False   # as in the validated template (template_kpfhr.psf)
 
     # Filtros recirculación
     filter_flow_rate: float = 0.0
@@ -453,6 +453,41 @@ class PSFModel:
                     errors.append(
                         f"Pathway {i}: {label}={num} fuera de rango (1-{n})")
 
+        # Modelos que este generador no escribe: mejor un error que un .psf incoherente
+        for i, c in enumerate(self.compartments, 1):
+            if c.has_sprays:
+                errors.append(f"Compartimento {i}: los sprays no están soportados por el generador "
+                              "(desactívalos o edita el .psf a mano)")
+            if c.has_opool:
+                errors.append(f"Compartimento {i}: la «overlying pool» no está soportada por el generador")
+            if c.has_filters and c.filter_eff_table is None:
+                errors.append(f"Compartimento {i}: filtros de recirculación sin tabla de eficiencias")
+            if c.comp_type == COMP_TYPE_ENVIRONMENT and c.volume_m3 != 0:
+                errors.append(f"Compartimento {i}: el Environment debe tener volumen 0")
+            if c.comp_type != COMP_TYPE_ENVIRONMENT and c.volume_m3 <= 0:
+                errors.append(f"Compartimento {i} («{c.name}»): el volumen debe ser mayor que 0")
+        if sum(c.comp_type == COMP_TYPE_ENVIRONMENT for c in self.compartments) != 1:
+            errors.append("Debe haber exactamente un compartimento de tipo Environment")
+        if sum(c.comp_type == COMP_TYPE_CONTROL_ROOM for c in self.compartments) > 1:
+            errors.append("Solo puede haber un compartimento de tipo Control Room")
+        if not (1 <= self.source_compartment <= n):
+            errors.append(f"El compartimento fuente ({self.source_compartment}) no existe")
+        elif n and self.compartments[self.source_compartment - 1].comp_type != COMP_TYPE_OTHER:
+            errors.append("El compartimento 1 recibe el término fuente: debe ser de tipo Other "
+                          "(no Environment ni Control Room)")
+        for i, p in enumerate(self.pathways, 1):
+            if p.from_comp == p.to_comp:
+                errors.append(f"Pathway {i}: origen y destino son el mismo compartimento")
+            if p.path_type == PATH_TYPE_PIPING and not (p.piping_aerosol_table or p.piping_elemental_table
+                                                        or p.piping_organic_table):
+                errors.append(f"Pathway {i} («{p.name}»): el tipo Piping no transporta nada sin sus tablas, que "
+                              "la interfaz no edita; usa Filter (caudal en m³/s) o Air Leakage")
+            if p.path_type == PATH_TYPE_FILTER and p.filter_table is None:
+                errors.append(f"Pathway {i}: camino de tipo Filter sin tabla de caudal")
+        for name, tbl in [(f"Dose location {i}", dl.xq_table) for i, dl in enumerate(self.dose_locations, 1)]:
+            if tbl is not None and any(b <= a_ for a_, b in zip(tbl.times, tbl.times[1:])):
+                errors.append(f"{name}: los tiempos de la tabla de X/Q deben ser crecientes")
+
         # Compartimentos en dose locations
         for i, dl in enumerate(self.dose_locations, 1):
             if not (1 <= dl.compartment_number <= n):
@@ -495,7 +530,7 @@ class PSFModel:
         a = lines.append  # alias para brevedad
 
         # ── Cabecera ─────────────────────────────────────────────────────────
-        a(f" Radtrad 3.03")
+        a(f" Radtrad 3.03 4/15/2001")            # same header as the files written by RADTRAD 3.03
         a(f" {self.plant_model_name}")
         a(f" Nuclide Inventory File:")
         a(f" {self.nif_file}")
@@ -949,6 +984,7 @@ def run_gui(p: dict) -> int:
         radtrad_exe=Path(p.get("radtrad_exe") or P.RADTRAD_EXE), out_root=run["radtrad"], out_action="3",
         no_run=bool(p.get("no_run", False)), workers=int(p.get("workers") or max(1, (os.cpu_count() or 2) - 1)),
         del_arcon=bool(p.get("delete_arcon_dirs", False)), ship=tuple(p.get("ship") or _default_ship()),
+        instalacion=p.get("instalacion", "buque"), plant_power=p.get("plant_power"),
         run_arcon=do_arcon, run_radtrad=do_radtrad, bridge_excel=p.get("bridge_excel", ""))
     rc = P.run(params)
     sens = None

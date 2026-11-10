@@ -1047,7 +1047,8 @@ def _replace_first_match(lines, pattern, text):
             lines[i] = ind + text.encode() + nl; return True
     return False
 
-def _patch_power(lines, power=PLANT_POWER_MWTH):
+def _patch_power(lines, power=None):
+    power = PLANT_POWER_MWTH if power is None else power
     ok = _replace_next_after(lines, b"Plant Power Level:", f"{power:.4E}")
     if not ok and not _patch_power.warned:
         _patch_power.warned = True
@@ -1118,6 +1119,50 @@ def check_dcf(nif_path: Path, inp_path: Path):
     else:
         logging.info("DCF check OK: all %d nuclides of %s are in %s", len(in_nif), nif_path.name, inp_path.name)
     return missing
+
+
+def check_template(lines):
+    """Problems that stop a .psf from being used as the template of the chain (empty list = usable).
+
+    build_psf() rewrites, by position, the inventory, the dose and release files, the plant power, the
+    iodine fractions and the X/Q tables of dose locations 1 and 2. A .psf written by hand or by the PSF
+    generator must therefore have locations 1 and 2 in the environment with a user X/Q table; a third
+    location (control room) is left as it is."""
+    txt = [l.strip() for l in lines]
+    probs = []
+    for label in (b"Nuclide Inventory File:", b"Plant Power Level:", b"Source Term:", b"Dose Locations:",
+                  b"Output Filename:"):
+        if label not in txt:
+            probs.append("falta la línea «%s»" % label.decode())
+    if _locate_frac(lines) is None:
+        probs.append("no se encuentra la línea de fracciones químicas del yodo (aerosol, elemental, orgánico, 1.0)")
+    if not any(re.search(rb"\.inp\s*$", l) for l in lines):
+        probs.append("no se nombra el fichero de factores de dosis (.inp)")
+    if not any(re.search(rb"\.rft\s*$", l) for l in lines):
+        probs.append("no se nombra el fichero de fracciones de liberación (.rft)")
+    tipos = {}                                # compartment number -> type (2 = environment)
+    for i, l in enumerate(txt):
+        m = re.fullmatch(rb"Compartment (\d+):", l)
+        if m and i + 2 < len(txt) and txt[i + 2].isdigit() and int(m.group(1)) not in tipos:
+            tipos[int(m.group(1))] = int(txt[i + 2])
+    if b"Dose Locations:" in txt:
+        i0 = txt.index(b"Dose Locations:")
+        n = int(txt[i0 + 1]) if i0 + 1 < len(txt) and txt[i0 + 1].isdigit() else 0
+        if n < 2:
+            probs.append("hacen falta al menos dos dose locations (1 y 2: receptores exteriores); hay %d" % n)
+        for k in (1, 2):
+            idx = _find_loc_start(lines, b"Location %d:" % k)
+            if idx is None or idx + 3 >= len(txt):
+                continue
+            nombre = txt[idx + 1].decode("cp1252", "replace")
+            comp, modelo = txt[idx + 2], txt[idx + 3]
+            if modelo != b"1":
+                probs.append("Location %d («%s») no tiene tabla de X/Q de usuario: la cadena no puede escribir en "
+                             "ella el X/Q de ARCON96" % (k, nombre))
+            if comp.isdigit() and tipos.get(int(comp), 2) != 2:
+                probs.append("Location %d («%s») no está en el compartimento Environment: la cadena escribiría "
+                             "en ella el X/Q exterior" % (k, nombre))
+    return probs
 
 
 def _patch_support(lines, rft, nif, inp):
@@ -1527,7 +1572,9 @@ def run(p):
     """Phases 1-4 with the parameters of ask_all_params(). Optional keys used by the
     graphical interface: run_arcon / run_radtrad (default True) and bridge_excel (χ/Q
     Excel of a previous ARCON96 run, used when run_arcon is False)."""
-    global XQ_EXCEL
+    global XQ_EXCEL, PLANT_POWER_MWTH
+    if p.get("plant_power"):                 # thermal power written in every .psf (inventory in Ci/MWth)
+        PLANT_POWER_MWTH = float(p["plant_power"])
     do_arcon    = p.get("run_arcon", True)
     do_radtrad  = p.get("run_radtrad", True)
     if not do_arcon:
@@ -1559,6 +1606,8 @@ def run(p):
         errors.append(f"Bridge Excel not found: {XQ_EXCEL}")
     if do_radtrad and not template_path.exists():
         errors.append(f"PSF template not found: {template_path}")
+    elif do_radtrad:
+        errors += [f"PSF template {template_path.name}: {x}" for x in check_template(_read_template(template_path))]
     if do_radtrad and not no_run and not radtrad_exe.exists():
         errors.append(f"RADTRAD executable not found: {radtrad_exe}")
     if errors:
@@ -1762,7 +1811,8 @@ def run(p):
         from zonas_emergencia import generar, DEFAULT_LAT, DEFAULT_LON, DEFAULT_HEADING
         e2_post = out_root / "E2" / "postprocess"
         generar(out_root / "postprocess", *(p.get("ship") or (DEFAULT_LAT, DEFAULT_LON, DEFAULT_HEADING)),
-                e2=e2_post if "E2" in worst2h_by and e2_post.exists() else None)
+                e2=e2_post if "E2" in worst2h_by and e2_post.exists() else None,
+                instalacion=p.get("instalacion", "buque"))
     except Exception as e:
         logging.error("Zone map not generated: %s", e)
 
