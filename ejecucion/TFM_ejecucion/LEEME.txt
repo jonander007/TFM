@@ -123,7 +123,9 @@ meteorología constante, clase F y 1 m/s todas las horas (accidente de referenci
   psf_batch_F1\postprocess y ARCON96 en ARCON_F1).
 
 Embarcación o planta terrestre
-  Arriba de la pestaña de cálculo se elige el tipo de instalación:
+  LANZAR_RADTRAD.bat abre la edición para buques, que es la que describe la memoria: arriba de la
+  pestaña de cálculo se indican la posición del buque, el rumbo y la potencia.
+  LANZAR_RADTRAD_GENERAL.bat (python RADTRAD_GUI.py --general) añade la elección del tipo de instalación:
     - Embarcación (por defecto): latitud y longitud del centro del buque y rumbo de la proa. Las zonas
       se centran en el reactor, a popa. Barrido propuesto: 10-400 m, paso 10 m.
     - Planta terrestre: latitud y longitud del reactor, sin casco ni rumbo. Barrido propuesto:

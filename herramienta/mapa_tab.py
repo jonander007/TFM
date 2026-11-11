@@ -190,9 +190,10 @@ SERVIDOR = _Servidor()
 
 
 class MapaZonasTab(tk.Frame):
-    def __init__(self, parent, base_dir: Path):
+    def __init__(self, parent, base_dir: Path, general: bool = False):
         super().__init__(parent, bg=BG_APP)
         self.base = Path(base_dir)
+        self.general = general      # False: ship edition, no choice of installation type
         self.data = None            # contents of zonas_emergencia.json
         self.folder = None
         self.sources = []
@@ -236,8 +237,10 @@ class MapaZonasTab(tk.Frame):
                  bg=BG_CARD, fg=MUTED, font=FONT_SM, wraplength=380, justify="left").pack(fill="x", pady=(6, 0))
 
         # ship
-        card = self._card(left, "Instalación")
-        row = tk.Frame(card, bg=BG_CARD); row.pack(fill="x", pady=(0, 6))
+        card = self._card(left, "Instalación" if self.general else "Buque")
+        row = tk.Frame(card, bg=BG_CARD)
+        if self.general:
+            row.pack(fill="x", pady=(0, 6))
         for val, txt in (("buque", "Embarcación"), ("terrestre", "Planta terrestre")):
             tk.Radiobutton(row, text=txt, variable=self.tipo, value=val, bg=BG_CARD, fg=TEXT, font=FONT_SM,
                            activebackground=BG_CARD, selectcolor=BG_CARD,
@@ -278,7 +281,7 @@ class MapaZonasTab(tk.Frame):
         cb.pack(side="left", pady=4)
         cb.bind("<<ComboboxSelected>>", lambda e: (setattr(self.teselas, "fallos", 0), self.dibujar()))
         self._btn(top, "Ajustar", self._ajustar, small=True).pack(side="right", padx=8, pady=4)
-        tk.Label(top, text="rueda: zoom · arrastrar: mover · clic derecho: situar el buque o la planta",
+        tk.Label(top, text="rueda: zoom · arrastrar: mover · clic derecho: situar el buque",
                  bg=BG_CARD, fg=MUTED, font=FONT_SM).pack(side="right")
         self.cv = tk.Canvas(right, bg=SEA, highlightthickness=0)
         self.cv.pack(fill="both", expand=True)

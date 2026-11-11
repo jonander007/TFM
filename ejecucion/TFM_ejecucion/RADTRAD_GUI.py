@@ -75,6 +75,12 @@ import json
 # ── Rutas ────────────────────────────────────────────────────────────────────
 SCRIPT_DIR = Path(__file__).resolve().parent
 
+# Edition. By default the interface is the ship edition of the TFM: no choice of installation type.
+# «python RADTRAD_GUI.py --general» (or RADTRAD_GENERAL=1) also offers the land plant.
+GENERAL = "--general" in sys.argv or os.environ.get("RADTRAD_GENERAL", "") not in ("", "0")
+if GENERAL:
+    os.environ["RADTRAD_GENERAL"] = "1"          # the map written by the chain shows the selector too
+
 DIR_INPUT   = SCRIPT_DIR / "INPUT"
 DIR_MET     = DIR_INPUT / "MET"
 DIR_NIF     = DIR_INPUT / "NIF"
@@ -238,9 +244,10 @@ Tres modos de entrada:
 - Opción para borrar los directorios de ejecución de ARCON96 al finalizar.
 - Opción para conservar la carpeta WORK completa.
 
-### Tipo de instalación
+### Buque y tipo de instalación
 
-Arriba del todo se elige entre **Embarcación (reactor a bordo)** y **Planta terrestre**:
+La interfaz se abre en la edición para buques: arriba se indican la posición del centro del buque, el rumbo
+y la potencia. Con `python RADTRAD_GUI.py --general` (o `LANZAR_RADTRAD_GENERAL.bat`) se elige además entre **Embarcación (reactor a bordo)** y **Planta terrestre**:
 
 - *Embarcación*: latitud y longitud del centro del buque y rumbo de la proa. Las zonas se centran en el
   reactor, a popa, y el casco se dibuja a escala. Barrido propuesto: 10–400 m, paso 10 m.
@@ -1145,9 +1152,11 @@ class InstalacionWidget(tk.Frame):
         except Exception:
             lat, lon, rumbo = 43.3605, -3.0820, 300.0
         self._ship_default = (lat, lon, rumbo)
-        tk.Label(self, text="Tipo de instalación", bg=BG_CARD, fg=TEXT, font=FONT_BOLD,
+        tk.Label(self, text="Tipo de instalación" if GENERAL else "Buque", bg=BG_CARD, fg=TEXT, font=FONT_BOLD,
                  anchor="w").pack(fill="x", padx=12, pady=(8, 2))
-        row = tk.Frame(self, bg=BG_CARD); row.pack(fill="x", padx=12)
+        row = tk.Frame(self, bg=BG_CARD)
+        if GENERAL:
+            row.pack(fill="x", padx=12)
         self.tipo = tk.StringVar(value="buque")
         for val, label in (("buque", "Embarcación (reactor a bordo)"), ("terrestre", "Planta terrestre")):
             tk.Radiobutton(row, text=label, variable=self.tipo, value=val, bg=BG_CARD, fg=TEXT, font=FONT_UI,
@@ -1175,9 +1184,9 @@ class InstalacionWidget(tk.Frame):
         self._lbl["lon"].config(text="Longitud (centro del buque)" if buque else "Longitud (reactor)")
         self._ent["rumbo"].config(state="normal" if buque else "disabled")
         self._hint.config(text=(
-            "Buque: las zonas se centran en el reactor, a popa, y el casco se dibuja a escala con su rumbo. "
-            "Por defecto, atraque de metaneros de BBG (Zierbena). En el mapa: EAB, LPZ, evacuación, confinamiento "
-            "y planificación." if buque else
+            ("Buque: las zonas" if GENERAL else "Las zonas") + " se centran en el reactor, a popa, y el casco se "
+            "dibuja a escala con su rumbo. Por defecto, atraque de metaneros de BBG (Zierbena). La potencia se "
+            "escribe en todos los escenarios de RADTRAD." if buque else
             "Planta terrestre: las zonas se centran en el punto indicado (el reactor), sin casco ni rumbo. No hay "
             "emplazamiento por defecto: escribe sus coordenadas o sitúalo después en la pestaña del mapa. En el mapa: "
             "EAB, LPZ y planificación (las demás se pueden activar). Barrido propuesto: 50–1.200 m, el intervalo "
@@ -3189,6 +3198,9 @@ class PSFApp(tk.Frame):
         bar = tk.Frame(self, bg=CARD, highlightthickness=1, highlightbackground=BORDER)
         bar.pack(fill="x", padx=8, pady=(8, 4))
         tk.Label(bar, text="Preajuste:", bg=CARD, fg=MUTED, font=FONT_SM).pack(side="left", padx=(10, 4), pady=8)
+        if not GENERAL:
+            for _k in [k for k, v in PSF_PRESET_KEYS.items() if v == "terrestre"]:
+                del PSF_PRESET_KEYS[_k]
         self._preset_var = tk.StringVar(value=list(PSF_PRESET_KEYS)[0])
         SCombo(bar, list(PSF_PRESET_KEYS), width=34, textvariable=self._preset_var).pack(side="left")
         def _b(text, cmd, color=INPUT, fg=TEXT):
@@ -4043,7 +4055,7 @@ class RADTRADApp(tk.Tk):
         nb.add(tab3, text="  Mapa de zonas  ")
         try:
             from mapa_tab import MapaZonasTab
-            self.mapa_tab = MapaZonasTab(tab3, SCRIPT_DIR)
+            self.mapa_tab = MapaZonasTab(tab3, SCRIPT_DIR, general=GENERAL)
             self.mapa_tab.pack(fill="both", expand=True)
             self.mapa_tab.instalacion_por_defecto = lambda: self._pipeline_content.inst_widget.get()
             self._pipeline_content.on_run_finished = (

@@ -112,16 +112,11 @@ for _old, _new in (("«NUREG-0800, Standard Review Plan, Section 2.3.3: Onsite M
 # -------------------------------------------- chapter 12: what the interface covers
 _p_ifz = P("El buque se dibuja a escala, con la eslora y la manga del buque de referencia")
 after(_p_ifz, [
-    T("La interfaz permite además elegir el tipo de instalación. Con «Embarcación», que es el caso de este trabajo, se "
-      "indican la posición del centro del buque y el rumbo, y las zonas se centran en el reactor, a popa. Con «Planta "
-      "terrestre» se indican las coordenadas del reactor, no se dibuja casco y se propone un barrido de 50 a 1.200 m, "
-      "el intervalo en el que se validó ARCON96. El modelo de RADTRAD y los criterios de dosis son los mismos en los "
-      "dos casos, de modo que la cadena puede aplicarse a un emplazamiento en tierra sin modificarla."),
     T("La segunda pestaña es un generador de escenarios de RADTRAD, para modelos distintos de la plantilla empleada "
       "aquí. Escribe compartimentos con filtros de recirculación y deposición natural, caminos con filtro, por fuga "
       "de aire o a través de una piscina de supresión, y receptores con sus tablas de X/Q, tasas de respiración y "
       "factores de ocupación; no escribe rociadores, piscinas superpuestas ni las tablas de los caminos por tubería, y "
-      "avisa si se le piden. Sus dos preajustes reproducen línea a línea la plantilla validada con RADTRAD, salvo los "
+      "avisa si se le piden. Su preajuste del KP-FHR reproduce línea a línea la plantilla validada con RADTRAD, salvo los "
       "valores de X/Q, que la cadena sustituye en cada caso. Antes de usar un escenario, la herramienta comprueba "
       "que los dos primeros receptores están en el ambiente exterior y tienen tabla de X/Q, porque en ellos escribe "
       "el X/Q de ARCON96.")])
@@ -132,13 +127,12 @@ V("Su núcleo son dos módulos: PIPELINE.py", "Está escrita en Python.",
 # ------------------------------------------------------------ Anexo F, user manual
 V("Es la pestaña de cálculo (Figura", "El panel izquierdo tiene dos secciones que se activan con su interruptor; el "
   "derecho muestra el registro de la ejecución. Pasos:",
-  "El panel izquierdo tiene, arriba, el tipo de instalación y, debajo, dos secciones que se activan con su "
+  "El panel izquierdo tiene, arriba, los datos del buque y, debajo, dos secciones que se activan con su "
   "interruptor; el derecho muestra el registro de la ejecución. Pasos:")
 _p_met = P("Datos meteorológicos: los ficheros MET01 a MET05 de INPUT")
-_new_inst = new_para_like(_p_met, "Tipo de instalación: «Embarcación (reactor a bordo)», con la latitud y la longitud "
-                          "del centro del buque y el rumbo de la proa, o «Planta terrestre», con las coordenadas del "
-                          "reactor. Al cambiarlo se propone el barrido de distancias de cada caso (de 10 a 400 m cada "
-                          "10 m, o de 50 a 1.200 m cada 50 m). La potencia térmica indicada se escribe en todos los "
+_new_inst = new_para_like(_p_met, "Buque: latitud y longitud del centro del buque, rumbo de la proa y potencia "
+                          "térmica del reactor. Por defecto, el atraque de metaneros de BBG, rumbo 300° y 320 MWₜₕ. "
+                          "Las zonas se centran en el reactor, a popa, y la potencia se escribe en todos los "
                           "escenarios de RADTRAD.", lead=True)
 _p_met.addprevious(_new_inst)
 V("RADTRAD: escenario (plantilla template_kpfhr.psf o el creado con el generador)",
@@ -146,29 +140,14 @@ V("RADTRAD: escenario (plantilla template_kpfhr.psf o el creado con el generador
   "escenario (plantilla template_kpfhr.psf o el creado con el generador y enviado con «Usar en el cálculo»)")
 V("Permite crear escenarios de RADTRAD distintos de la plantilla",
   "La pestaña «Vista previa» muestra el esquema de compartimentos y el fichero resultante.",
-  "La barra superior tiene los preajustes («Embarcación» y «Planta terrestre», que cargan el modelo validado del "
-  "KP-FHR, y «Vacío»), «Guardar config» y «Cargar config», que guardan y recuperan todo el contenido en un fichero "
+  "La barra superior tiene los preajustes («Embarcación», que carga el modelo validado del KP-FHR, y «Vacío»), "
+  "«Guardar config» y «Cargar config», que guardan y recuperan todo el contenido en un fichero "
   ".json, «Guardar PSF» y «Usar en el cálculo», que valida el escenario, lo guarda en INPUT\\PSF\\generated.psf y lo "
   "selecciona en la pestaña de cálculo. La pestaña «Vista previa» muestra el esquema de compartimentos y el fichero "
   "resultante. El generador no escribe rociadores, piscinas superpuestas ni las tablas de los caminos por tubería: "
   "si se activan, lo indica en lugar de generar el fichero. Los receptores 1 y 2 deben estar en el ambiente exterior "
   "con tabla de X/Q de usuario, porque la cadena escribe en ellos el X/Q de cada distancia.")
-V("Buque: latitud, longitud y rumbo (dirección de la proa) del centro del buque, eslora, manga",
-  "Buque: latitud, longitud y rumbo (dirección de la proa) del centro del buque, eslora, manga y distancia del "
-  "reactor a la popa;",
-  "Instalación: embarcación o planta terrestre. Para una embarcación, latitud, longitud y rumbo (dirección de la "
-  "proa) del centro del buque, eslora, manga y distancia del reactor a la popa; para una planta terrestre, latitud "
-  "y longitud del reactor;")
-V("clic derecho: situar el centro del buque; doble clic", "situar el centro del buque", "situar el centro del buque o "
-  "el reactor de la planta")
 V("Salidas: «Guardar buque y criterios»", "«Guardar buque y criterios»", "«Guardar posición y criterios»")
-V("Se abre sola al terminar cada ejecución (Figura", "Se abre sola al terminar cada ejecución (",
-  "Se abre sola al terminar cada ejecución (la captura corresponde a una versión anterior, en la que el panel de la "
-  "instalación se llamaba «Buque»; ")
-V("python zonas_emergencia.py psf_batch\\postprocess regenera solo las zonas y el mapa",
-  "regenera solo las zonas y el mapa", "regenera solo las zonas y el mapa (con --instalacion terrestre, para una "
-  "planta en tierra)")
-
 # new screenshots of the calculation and generator tabs (the interface has changed)
 _SH = HERE.parent / "psf"
 for _rid, _png in (("rId51", "fig_pipeline.png"), ("rId52", "fig_psf_preview.png")):

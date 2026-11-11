@@ -970,6 +970,8 @@ function syncInputs() {
   $("lat").value = S.lat.toFixed(5); $("lon").value = S.lon.toFixed(5); $("rumbo").value = S.rumbo;
   $("eslora").value = S.eslora; $("manga").value = S.manga; $("popa").value = S.popa;
   $("tipo").value = S.tipo;
+  $("tipo").parentElement.style.display = (S.data && S.data._general) || tierra() ? "" : "none";   // ship edition: no selector
+  document.querySelector("#tipo").closest("section").querySelector("h2").textContent = (S.data && S.data._general) || tierra() ? "Instalación" : "Buque";
   document.querySelectorAll(".solo-buque").forEach(e => { e.style.display = tierra() ? "none" : ""; });
   $("titulo").textContent = tierra() ? "Zonas de emergencia de la planta" : "Zonas de emergencia del buque";
   if (HINT_BUQUE === null) HINT_BUQUE = $("movehint").textContent;

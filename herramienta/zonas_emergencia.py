@@ -30,7 +30,7 @@ Usage:
 
 from __future__ import annotations
 
-import argparse, json, logging, math
+import argparse, json, logging, math, os
 from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Dict, Optional
@@ -327,7 +327,8 @@ PAGE = ('<!doctype html>\n<html lang="es"><head><meta charset="utf-8">'
 
 def escribir_mapa(resultado: Dict, html: Path, fuente: str = "") -> Path:
     """Interactive viewer (visor_zonas.html) with the results embedded."""
-    data = dict(resultado, _fuente=fuente or html.parent.name)
+    data = dict(resultado, _fuente=fuente or html.parent.name,
+                _general=bool(os.environ.get("RADTRAD_GENERAL")) or tipo_instalacion(resultado) == "terrestre")
     page = VISOR.read_text(encoding="utf-8").replace(
         "/*DATOS*/null/*FIN*/", "/*DATOS*/%s/*FIN*/" % json.dumps(data, ensure_ascii=False))
     # Leaflet goes inside the page, so mapa_zonas.html works on its own and offline

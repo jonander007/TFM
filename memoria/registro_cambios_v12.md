@@ -91,9 +91,9 @@ Salidas: `TFM_v13.pdf` (documento de entrega), `TFM_v13_limpia.docx` y `TFM_v13_
 | Cap. 13 | «unos 101 mSv a tiroides a 10 m en E1 y 103 mSv en E2»; sin repetir «≤ 10 m» | Claridad | corregido |
 | Cap. 14 | «cinco errores del procedimiento inicial», como en el capítulo 12 (antes «dos» y «otros tres») | Coherencia | corregido |
 | Cap. 11, Anexos B, D y E | Quitadas las rutas a ficheros y carpetas que no acompañan al PDF | Solo se entrega el PDF | corregido |
-| Cap. 12 | Párrafos nuevos: tipo de instalación (embarcación o planta terrestre) y alcance del generador de escenarios; el código no forma parte del documento | Herramienta actualizada | corregido |
-| Anexo F | Manual actualizado (tipo de instalación, barra del generador, «Usar en el cálculo», «Guardar posición y criterios») y Figuras 22 y 23 nuevas | Herramienta actualizada | corregido |
+| Cap. 12 | Párrafo nuevo sobre el alcance del generador de escenarios; el código no forma parte del documento | Herramienta actualizada | corregido |
+| Anexo F | Manual de la edición para buques (datos del buque, barra del generador, «Usar en el cálculo», «Guardar posición y criterios») y Figuras 22 y 23 nuevas | Herramienta actualizada | corregido |
 | Bibliografía | [46] NUREG-0800 2.3.3, Rev. 3, 2007; [34] «s. f.» | Faltaba el año | corregido; [28] sigue sin año |
 | PDF | Índice, lista de figuras y lista de tablas con las páginas reales; anexos como A-1, B-2…; marcadores, título y autor | Entrega en PDF | corregido |
 
-El PDF se genera con `scripts/export_pdf.py` (LibreOffice). La Figura 16 conserva la captura anterior del mapa, en la que el panel se llamaba «Buque»; el texto lo indica.
+El PDF se genera con `scripts/export_pdf.py` (LibreOffice). La memoria describe la edición para buques de la herramienta; la opción de planta terrestre queda fuera del documento y se abre con `LANZAR_RADTRAD_GENERAL.bat`.
