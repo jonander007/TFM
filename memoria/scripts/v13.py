@@ -78,6 +78,20 @@ for _p in paras():
             except ValueError:
                 break
 print("quotes:", _nq)
+# long dashes around asides -> parentheses (outside tables)
+_nd = 0
+for _p in paras():
+    if _p in _bibp or any(a.tag == q("tbl") for a in _p.iterancestors()):
+        continue
+    for _o, _n_ in ((" —", " ("), ("—,", "),"), ("— ", ") "), ("—", ", ")):
+        _g = 0
+        while _o in visible(_p) and _o in ptext(_p) and _g < 6:
+            _g += 1
+            try:
+                RRo(_p, _o, _n_); _nd += 1
+            except ValueError:
+                break
+print("long dashes:", _nd)
 # headings with stray blanks (" RESULTADOS ", " CONCLUSIONES")
 for _p in paras():
     _st = _p.find(q("pPr") + "/" + q("pStyle"))
